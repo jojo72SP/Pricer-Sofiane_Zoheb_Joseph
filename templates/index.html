@@ -3,151 +3,158 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PRICER — Produits structurés</title>
+<title>Pricer · Sterling &amp; Pierce</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
-/* Terminal de marché : fond noir, texte ambre, bandeaux bleus, chiffres en chasse fixe. */
+/* Charte Sterling & Pierce (provisoire, reprise de la newsletter S&P Tech Monthly) :
+   bleu marine, papier creme, or ; Lora pour les titres, Inter pour le texte et les chiffres. */
 :root{
-  --bg:#000;            /* fond de l'écran */
-  --panel:#07090d;      /* fond des panneaux */
-  --bar:#102a52;        /* bandeaux de titre bleus */
-  --line:#262b33;       /* séparateurs */
-  --amber:#ffa028;      /* couleur maîtresse : titres, saisies, focus */
-  --yellow:#f5d547;     /* mise en avant ponctuelle */
-  --text:#e6e6e6;       /* valeurs */
-  --muted:#8a8f98;      /* libellés secondaires */
-  --cyan:#5cc8ff;
-  --green:#3ddc84;
-  --red:#ff5c5c;
-  --mono:'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-  --cond:'IBM Plex Sans Condensed', 'Arial Narrow', system-ui, sans-serif;
+  --navy:#0F1F38;       /* bandeau, boutons, chiffres cles */
+  --ink:#121A2A;        /* texte principal */
+  --grey:#5A6476;       /* libelles secondaires */
+  --paper:#F6F2EA;      /* fond de page */
+  --card:#FFFFFF;       /* fond des panneaux */
+  --rule:#DDD5C4;       /* filets et bordures */
+  --gold:#E3C77F;       /* or sur fond marine */
+  --gold-ink:#8A6A22;   /* or lisible sur fond clair */
+  --up:#1E7B34;         /* gain */
+  --down:#C5221F;       /* perte */
+  --serif:Lora, Georgia, 'Times New Roman', serif;
+  --sans:Inter, 'Segoe UI', Arial, sans-serif;
 }
 *{box-sizing:border-box}
-html{color-scheme:dark}
-body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 var(--cond)}
+html{color-scheme:light}
+body{margin:0;background:var(--paper);color:var(--ink);font:14px/1.5 var(--sans)}
 
-/* --- Barre de commande en haut --- */
-.topbar{display:flex;align-items:stretch;border-bottom:1px solid var(--line);background:#000;font-family:var(--mono);font-size:13px}
-.brand{background:var(--amber);color:#000;font-weight:600;padding:8px 14px;letter-spacing:.06em}
-.cmd{flex:1;display:flex;align-items:center;gap:10px;padding:0 14px;color:var(--amber);min-width:0}
-.cmd .prompt{color:var(--muted)}
-.cmd .go{border:1px solid var(--green);color:var(--green);padding:0 6px;font-size:11px;line-height:18px}
-.cmd .caret{display:inline-block;width:8px;height:15px;background:var(--amber);animation:blink 1.1s steps(1) infinite;vertical-align:-2px}
-.cmd .desc{color:var(--muted);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.clock{padding:0 14px;display:flex;align-items:center;gap:12px;color:var(--yellow);font-variant-numeric:tabular-nums;white-space:nowrap}
-.clock .live{color:var(--green)}
-.clock .live::before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);margin-right:6px;vertical-align:1px}
-@keyframes blink{50%{opacity:0}}
+/* --- Bandeau marine --- */
+.topbar{display:flex;align-items:center;gap:18px;background:var(--navy);color:#fff;padding:14px 28px}
+.brand{font:600 12px var(--sans);letter-spacing:.32em;color:var(--gold);white-space:nowrap}
+.sep{width:1px;align-self:stretch;background:rgba(227,199,127,.35)}
+.cmd{flex:1;display:flex;align-items:baseline;gap:12px;min-width:0}
+.cmd .app{font:600 19px var(--serif);color:#fff;white-space:nowrap}
+.cmd .code{font:600 10.5px var(--sans);letter-spacing:.14em;color:var(--gold);border:1px solid rgba(227,199,127,.55);border-radius:3px;padding:1px 6px}
+.cmd .desc{color:#C9CFDA;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.clock{display:flex;align-items:center;gap:12px;color:#C9CFDA;font-variant-numeric:tabular-nums;white-space:nowrap;font-size:13px}
+.clock .live{color:var(--gold);font-weight:600;letter-spacing:.14em;font-size:11px}
 
-main{max-width:1320px;margin:auto;padding:14px 16px 28px}
+main{max-width:1320px;margin:auto;padding:26px 28px 40px}
+.hero{margin:0 0 22px;padding-bottom:18px;border-bottom:1px solid var(--rule)}
+.hero .kicker{margin:0 0 6px;font:600 11px var(--sans);letter-spacing:.22em;text-transform:uppercase;color:var(--gold-ink)}
+.hero h1{margin:0;font:700 30px/1.15 var(--serif);color:var(--ink)}
+.hero p{margin:6px 0 0;color:var(--grey)}
 
-/* --- Menu des fonctions, numérotées comme sur un terminal --- */
-.tabs{display:flex;flex-wrap:wrap;gap:2px;margin-bottom:12px;border-bottom:1px solid var(--line)}
-.tab{background:none;border:0;border-bottom:2px solid transparent;color:var(--text);font:500 14px var(--cond);padding:8px 14px 7px;cursor:pointer}
-.tab .key{color:var(--amber);font-family:var(--mono);font-size:12px;margin-right:4px}
-.tab:hover{background:#0e1218}
-.tab.active{background:var(--bar);border-bottom-color:var(--amber);color:#fff}
-.tab:focus-visible{outline:1px solid var(--amber);outline-offset:-1px}
+.grid{display:grid;grid-template-columns:350px minmax(0,1fr);gap:20px;align-items:start}
+.card{background:var(--card);border:1px solid var(--rule);border-radius:8px}
+.grid > .card{position:sticky;top:16px;max-height:calc(100vh - 32px);overflow-y:auto;scrollbar-color:var(--rule) transparent}
+form{padding:0 18px 18px}
 
-.grid{display:grid;grid-template-columns:340px minmax(0,1fr);gap:12px;align-items:start}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:2px}
-.grid > .card{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow-y:auto;scrollbar-color:#333 transparent}
-form{padding:0 14px 16px}
+/* Titres de section : petites capitales or, filet fin */
+h2{margin:20px 0 12px;padding:0 0 7px;border-bottom:1px solid var(--rule);color:var(--gold-ink);font:600 11px var(--sans);text-transform:uppercase;letter-spacing:.18em}
+.chart-card h2{margin:0 0 12px}
 
-/* Titres de section : bandeau bleu pleine largeur, texte ambre */
-h2{margin:0 -14px 12px;padding:5px 14px;background:var(--bar);color:var(--amber);font:600 12px var(--mono);text-transform:uppercase;letter-spacing:.08em}
-form h2{margin-top:0}
-form h2 + .fields, form h2 + .hint{margin-top:0}
-.chart-card h2{margin:-14px -14px 12px}
-
-.fields{display:grid;grid-template-columns:1fr 1fr;gap:10px 10px;margin-bottom:16px}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:12px 12px;margin-bottom:6px}
 .full{grid-column:1/-1}
-label{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-bottom:3px}
-input,select{width:100%;background:#0d0f13;border:1px solid #343a44;border-radius:2px;color:var(--amber);padding:6px 8px;font:500 14px var(--mono);min-height:32px;font-variant-numeric:tabular-nums}
-input::placeholder{color:#5b616b}
-input:disabled{color:var(--muted);background:#0a0b0e}
-input:focus,select:focus{outline:none;border-color:var(--amber);box-shadow:0 0 0 1px var(--amber)}
-input:invalid:not(:focus):not(:placeholder-shown){border-color:var(--red)}
-select{appearance:none;cursor:pointer;padding-right:26px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0h10L5 6z' fill='%23ffa028'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center}
+label{display:block;font-size:12px;font-weight:500;color:var(--grey);margin-bottom:4px}
+input,select{width:100%;background:#fff;border:1px solid var(--rule);border-radius:6px;color:var(--ink);padding:7px 10px;font:500 14px var(--sans);min-height:36px;font-variant-numeric:tabular-nums}
+input::placeholder{color:#9AA1AD}
+input:disabled{color:var(--grey);background:#F1EDE4}
+input:focus,select:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(15,31,56,.12)}
+input:invalid:not(:focus):not(:placeholder-shown){border-color:var(--down)}
+select{appearance:none;cursor:pointer;padding-right:28px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0h10L5 6z' fill='%230F1F38'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center}
 select:disabled{opacity:.7;cursor:default}
-input[type=number]::-webkit-inner-spin-button{opacity:.35}
-.hint{font-size:12px;color:var(--muted);margin:6px 0 0}
-.check{display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:500;color:var(--text);cursor:pointer;margin:0}
-.check input{width:14px;height:14px;min-height:0;margin:2px 0 0;accent-color:var(--amber);flex:none}
+.hint{font-size:12px;color:var(--grey);margin:6px 0 0}
+.check{display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:500;color:var(--ink);cursor:pointer;margin:0}
+.check input{width:15px;height:15px;min-height:0;margin:2px 0 0;accent-color:var(--navy);flex:none}
 
-details{border-top:1px solid var(--line);padding-top:10px;margin-bottom:12px}
-details summary{cursor:pointer;color:var(--amber);font:500 12px var(--mono);text-transform:uppercase;letter-spacing:.06em;list-style:none}
+details{border-top:1px solid var(--rule);padding-top:12px;margin-bottom:12px}
+details summary{cursor:pointer;color:var(--gold-ink);font:600 11px var(--sans);text-transform:uppercase;letter-spacing:.18em;list-style:none}
 details summary::-webkit-details-marker{display:none}
-details summary::before{content:'+ ';color:var(--muted)}
-details[open] summary::before{content:'− '}
+details summary::before{content:'+ '}
+details[open] summary::before{content:'\2212  '}
 
-button.primary{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin-top:4px;border:0;border-radius:2px;background:var(--amber);color:#000;padding:9px 14px;font:600 13px var(--mono);letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
-button.primary::after{content:'GO';font-size:10px;border:1px solid #000;padding:0 5px;line-height:15px}
-button.primary:hover{background:#ffb34f}
-button.primary:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
-button.primary:disabled{opacity:.55;cursor:wait}
-.status{font:12px var(--mono);color:var(--green);margin:8px 0 0;min-height:18px}
-.status.error{color:var(--red)}
+button.primary{display:flex;align-items:center;justify-content:center;width:100%;margin-top:10px;border:0;border-radius:6px;background:var(--navy);color:var(--gold);padding:11px 14px;font:600 13px var(--sans);letter-spacing:.14em;text-transform:uppercase;cursor:pointer}
+button.primary:hover{background:#1B3157}
+button.primary:focus-visible{outline:2px solid var(--gold-ink);outline-offset:2px}
+button.primary:disabled{opacity:.6;cursor:wait}
+.status{font-size:12px;color:var(--up);margin:8px 0 0;min-height:18px}
+.status.error{color:var(--down)}
 
-/* --- Résultats --- */
-.results{display:flex;flex-direction:column;gap:12px;min-width:0}
-.metrics{display:grid;grid-template-columns:repeat(3,1fr);background:var(--panel);border:1px solid var(--line);border-bottom:0;border-radius:2px}
-.metric{padding:10px 14px 12px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);min-width:0}
-.metric:nth-child(3n){border-right:0}
-.metric p{margin:0 0 2px;font:500 11px var(--mono);color:var(--amber);text-transform:uppercase;letter-spacing:.06em}
-.metric strong{display:block;font:500 24px var(--mono);color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.metric strong.pos{color:var(--green)}
-.metric strong.neg{color:var(--red)}
-.chart-card{padding:14px}
+/* --- Resultats --- */
+.results{display:flex;flex-direction:column;gap:20px;min-width:0}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);background:var(--card);border:1px solid var(--rule);border-radius:8px;overflow:hidden}
+.metric{padding:14px 18px 16px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);min-width:0}
+.metric:nth-child(4n){border-right:0}
+.metric:nth-last-child(-n+4){border-bottom:0}
+.metric:first-child{background:var(--navy)}
+.metric:first-child p{color:var(--gold)}
+.metric:first-child strong{color:#fff}
+.metric p{margin:0 0 4px;font:600 10.5px var(--sans);color:var(--grey);text-transform:uppercase;letter-spacing:.12em}
+.metric strong{display:block;font:600 24px var(--sans);letter-spacing:-.01em;color:var(--navy);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.metric strong.pos{color:var(--up)}
+.metric strong.neg{color:var(--down)}
+.chart-card{padding:18px}
 svg{width:100%;height:auto;display:block}
-svg text{font:11px var(--mono);fill:var(--muted)}
-.greeks-table{width:100%;border-collapse:collapse;font:13px var(--mono);font-variant-numeric:tabular-nums}
-.greeks-table th,.greeks-table td{text-align:left;padding:5px 8px;border-bottom:1px solid #161a20}
-.greeks-table th{color:var(--muted);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.06em}
-.greeks-table td:first-child{color:var(--amber)}
-.greeks-table td:not(:first-child){text-align:right;color:var(--text)}
+svg text{font:11px var(--sans);fill:var(--grey)}
+.greeks-table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+.greeks-table th,.greeks-table td{text-align:left;padding:7px 10px;border-bottom:1px solid #EEE8DC}
+.greeks-table th{color:var(--grey);font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;border-bottom:1px solid var(--rule)}
+.greeks-table td:first-child{color:var(--navy);font-weight:600}
+.greeks-table td:not(:first-child){text-align:right}
 .greeks-table th:not(:first-child){text-align:right}
-.greeks-table tbody tr:nth-child(even){background:#0b0e13}
-.greeks-table tbody tr:hover{background:#121823}
+.greeks-table tbody tr:nth-child(even){background:#FBF9F4}
+.greeks-table tbody tr:hover{background:#F3EEE3}
 .chart-card details{border-top:0;margin:12px 0 0;padding-top:0}
-.chart-note{font-size:12px;color:var(--muted);margin:10px 0 0}
-.empty{border:1px dashed #2c323b;color:var(--muted);font:13px var(--mono);padding:48px 16px;text-align:center}
-.empty::after{content:'';display:inline-block;width:8px;height:14px;background:var(--amber);margin-left:6px;vertical-align:-2px;animation:blink 1.1s steps(1) infinite}
-.ticker-hit{padding:7px 10px;cursor:pointer;border-bottom:1px solid var(--line);font:13px var(--mono);background:#0d0f13}
-.ticker-hit:hover{background:var(--bar)}
-.ticker-hit strong{color:var(--amber)}
+.chart-note{font-size:12px;color:var(--grey);margin:10px 0 0}
+.empty{border:1px dashed var(--rule);border-radius:8px;background:rgba(255,255,255,.5);color:var(--grey);padding:56px 16px;text-align:center}
+.ticker-hit{padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--rule);font-size:13px;background:#fff}
+.ticker-hit:hover{background:#F3EEE3}
+.ticker-hit strong{color:var(--navy)}
+footer{max-width:1320px;margin:0 auto;padding:0 28px 28px;color:var(--grey);font-size:12px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+footer .brand{color:var(--gold-ink);letter-spacing:.28em;font-size:11px}
 [hidden]{display:none !important}
-@media (prefers-reduced-motion:reduce){.cmd .caret,.empty::after{animation:none}}
+@media(max-width:1100px){
+  .metrics{grid-template-columns:repeat(2,1fr)}
+  .metric:nth-child(4n){border-right:1px solid var(--rule)}
+  .metric:nth-child(2n){border-right:0}
+  .metric:nth-last-child(-n+4){border-bottom:1px solid var(--rule)}
+  .metric:nth-last-child(-n+2){border-bottom:0}
+}
 @media(max-width:900px){
   .grid{grid-template-columns:1fr}
   .grid > .card{position:static;max-height:none}
-  .metrics{grid-template-columns:1fr 1fr}
-  .metric:nth-child(3n){border-right:1px solid var(--line)}
-  .metric:nth-child(2n){border-right:0}
-  .clock .date,.cmd .desc{display:none}
+  .topbar{flex-wrap:wrap;gap:6px 12px;padding:12px 16px}
+  .topbar .brand{flex-basis:100%}
+  .sep,.clock .date,.cmd .desc{display:none}
+  .cmd .code{white-space:nowrap}
+  main{padding:18px 16px 32px}
+  .hero h1{font-size:24px}
 }
 </style>
 </head>
 <body>
 
 <header class="topbar">
-  <div class="brand">PRICER</div>
+  <div class="brand">STERLING &amp; PIERCE</div>
+  <span class="sep" aria-hidden="true"></span>
   <div class="cmd">
-    <span class="prompt">&gt;</span>
-    <span id="cmd-code">STRC</span>
-    <span class="go">&lt;GO&gt;</span>
-    <span class="caret" aria-hidden="true"></span>
+    <span class="app">Pricer</span>
+    <span class="code" id="cmd-code">STRC</span>
     <span class="desc" id="cmd-desc">Produits structurés</span>
   </div>
   <div class="clock"><span class="live">PARIS</span><span class="date" id="clock-date"></span><span id="clock-time"></span></div>
 </header>
 
 <main>
+<div class="hero">
+  <p class="kicker">Sterling &amp; Pierce · Pricer</p>
+  <h1>Produits structurés</h1>
+  <p>Valorisation Monte Carlo des Phoenix et Autocall, à partir de paramètres manuels ou de données de marché.</p>
+</div>
 <section id="panel-structured" class="grid">
     <div class="card">
-      <div style="padding:0 14px 14px">
+      <div style="padding:0 18px 4px">
         <h2>Produit</h2>
         <label for="struct-product">Type de produit structuré</label>
         <select id="struct-product">
@@ -266,6 +273,10 @@ svg text{font:11px var(--mono);fill:var(--muted)}
     </div>
   </section>
 </main>
+<footer>
+  <span class="brand">STERLING &amp; PIERCE</span>
+  <span>Valeurs indicatives issues d'un modèle, hors frais et risque de crédit de l'émetteur.</span>
+</footer>
 <script>
 const $ = id => document.getElementById(id);
 const fmt = x => new Intl.NumberFormat('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:4}).format(x);
@@ -277,6 +288,10 @@ function majHorloge() {
 majHorloge();
 setInterval(majHorloge, 1000);
 
+// Couleurs du graphique, alignées sur la charte
+const THEME = {bg:'#FFFFFF', grid:'#EEE8DC', axis:'#B9B09C', payoff:'#0F1F38', pnl:'#8A6A22',
+  up:'#1E7B34', down:'#C5221F', breakeven:'#8A6A22', legend:'#5A6476', halo:'#FFFFFF',
+  rappel:'#0F1F38', coupon:'#1E7B34', protection:'#C5221F'};
 let chartId = 0;   // identifiant unique par graphe (pour les zones de découpe SVG)
 function renderChart(ST_grid, series, breakevens, opts = {}) {
   const W=760, H=340, L=60, R=16, top=34, bottom=44;
@@ -290,19 +305,19 @@ function renderChart(ST_grid, series, breakevens, opts = {}) {
   const Y = y => top + (ymax-y)/(ymax-ymin) * (H-top-bottom);
   const nb = v => new Intl.NumberFormat('fr-FR', {maximumFractionDigits: 2}).format(v);
 
-  const colors = {payoff:'#5cc8ff', pnl:'#ffa028'};
+  const colors = {payoff:THEME.payoff, pnl:THEME.pnl};
   const dash = {payoff:'6 5', pnl:'0'};
   const labels = Object.assign({payoff:'Payoff brut', pnl:'P&L net (après prime)'}, opts.labels || {});
 
-  let content = `<rect x="0" y="0" width="${W}" height="${H}" fill="#000"/>`;
+  let content = `<rect x="0" y="0" width="${W}" height="${H}" fill="${THEME.bg}"/>`;
   for (let i=0;i<=4;i++){
     const y = ymin + (ymax-ymin)*i/4;
-    content += `<line x1="${L}" x2="${W-R}" y1="${Y(y)}" y2="${Y(y)}" stroke="#1a1f27"/>`;
+    content += `<line x1="${L}" x2="${W-R}" y1="${Y(y)}" y2="${Y(y)}" stroke="${THEME.grid}"/>`;
     content += `<text x="${L-8}" y="${Y(y)+4}" text-anchor="end">${nb(y)}</text>`;
   }
   for (let i=0;i<=5;i++){
     const x = xmin + (xmax-xmin)*i/5;
-    content += `<line x1="${X(x)}" x2="${X(x)}" y1="${top}" y2="${H-bottom}" stroke="#12161c"/>`;
+    content += `<line x1="${X(x)}" x2="${X(x)}" y1="${top}" y2="${H-bottom}" stroke="${THEME.grid}"/>`;
     content += `<text x="${X(x)}" y="${H-bottom+20}" text-anchor="middle">${nb(x)}</text>`;
   }
   content += `<text x="${(W+L-R)/2}" y="${H-6}" text-anchor="middle">${opts.xLabel || 'Prix du sous-jacent à maturité'}</text>`;
@@ -317,27 +332,27 @@ function renderChart(ST_grid, series, breakevens, opts = {}) {
   if (pnlSerie) {
     const pts = ST_grid.map((x,i) => `L${X(x).toFixed(2)},${Y(pnlSerie.values[i]).toFixed(2)}`).join(' ');
     const aire = `M${X(xmin)},${zero} ${pts} L${X(xmax)},${zero} Z`;
-    content += `<path d="${aire}" fill="#3ddc84" fill-opacity=".14" clip-path="url(#haut${id})"/>`;
-    content += `<path d="${aire}" fill="#ff5c5c" fill-opacity=".14" clip-path="url(#bas${id})"/>`;
+    content += `<path d="${aire}" fill="${THEME.up}" fill-opacity=".10" clip-path="url(#haut${id})"/>`;
+    content += `<path d="${aire}" fill="${THEME.down}" fill-opacity=".10" clip-path="url(#bas${id})"/>`;
   }
-  content += `<line x1="${L}" x2="${W-R}" y1="${zero}" y2="${zero}" stroke="#5b616b"/>`;
+  content += `<line x1="${L}" x2="${W-R}" y1="${zero}" y2="${zero}" stroke="${THEME.axis}"/>`;
 
   // Lignes verticales (barrières d'un produit structuré, par exemple)
   (opts.markers || []).forEach((m, i) => {
     if (m.x < xmin || m.x > xmax) return;
     content += `<line x1="${X(m.x)}" x2="${X(m.x)}" y1="${top}" y2="${H-bottom}" stroke="${m.color}" stroke-dasharray="2 4"/>`;
-    content += `<text x="${X(m.x)+5}" y="${top + 14 + i*14}" text-anchor="start" style="fill:${m.color};paint-order:stroke;stroke:#000;stroke-width:4px">${m.label}</text>`;
+    content += `<text x="${X(m.x)+5}" y="${top + 14 + i*14}" text-anchor="start" style="fill:${m.color};paint-order:stroke;stroke:${THEME.halo};stroke-width:4px;font-weight:600">${m.label}</text>`;
   });
 
   series.forEach(s => {
     const path = ST_grid.map((x,i) => (i?'L':'M') + X(x).toFixed(2) + ',' + Y(s.values[i]).toFixed(2)).join(' ');
-    content += `<path d="${path}" fill="none" stroke="${colors[s.key]||'#ffa028'}" stroke-width="${s.key==='pnl'?2.2:1.6}" stroke-dasharray="${dash[s.key]||'0'}" stroke-linejoin="round"/>`;
+    content += `<path d="${path}" fill="none" stroke="${colors[s.key]||THEME.pnl}" stroke-width="${s.key==='pnl'?2.2:1.6}" stroke-dasharray="${dash[s.key]||'0'}" stroke-linejoin="round"/>`;
   });
 
   (breakevens||[]).forEach(be => {
-    content += `<line x1="${X(be)}" x2="${X(be)}" y1="${top}" y2="${H-bottom}" stroke="#f5d547" stroke-dasharray="3 4"/>`;
-    content += `<circle cx="${X(be)}" cy="${zero}" r="4" fill="#000" stroke="#f5d547" stroke-width="1.6"/>`;
-    content += `<text x="${X(be)+6}" y="${zero-8}" text-anchor="start" style="fill:#f5d547;paint-order:stroke;stroke:#000;stroke-width:4px">${nb(be)}</text>`;
+    content += `<line x1="${X(be)}" x2="${X(be)}" y1="${top}" y2="${H-bottom}" stroke="${THEME.breakeven}" stroke-dasharray="3 4"/>`;
+    content += `<circle cx="${X(be)}" cy="${zero}" r="4" fill="${THEME.bg}" stroke="${THEME.breakeven}" stroke-width="1.6"/>`;
+    content += `<text x="${X(be)+6}" y="${zero-8}" text-anchor="start" style="fill:${THEME.breakeven};paint-order:stroke;stroke:${THEME.halo};stroke-width:4px">${nb(be)}</text>`;
   });
 
   // Légende
@@ -345,13 +360,13 @@ function renderChart(ST_grid, series, breakevens, opts = {}) {
   const legendY = top - 14;
   series.forEach(s => {
     const label = labels[s.key] || s.key;
-    content += `<line x1="${legendX}" x2="${legendX+18}" y1="${legendY}" y2="${legendY}" stroke="${colors[s.key]||'#ffa028'}" stroke-width="2" stroke-dasharray="${dash[s.key]||'0'}"/>`;
-    content += `<text x="${legendX+24}" y="${legendY+4}" text-anchor="start" style="fill:#c9ccd1">${label}</text>`;
-    legendX += 24 + label.length * 6.7 + 22;
+    content += `<line x1="${legendX}" x2="${legendX+18}" y1="${legendY}" y2="${legendY}" stroke="${colors[s.key]||THEME.pnl}" stroke-width="2" stroke-dasharray="${dash[s.key]||'0'}"/>`;
+    content += `<text x="${legendX+24}" y="${legendY+4}" text-anchor="start" style="fill:${THEME.legend}">${label}</text>`;
+    legendX += 24 + label.length * 6.2 + 22;
   });
   if ((breakevens||[]).length) {
-    content += `<circle cx="${legendX+5}" cy="${legendY}" r="4" fill="#000" stroke="#f5d547" stroke-width="1.6"/>`;
-    content += `<text x="${legendX+15}" y="${legendY+4}" text-anchor="start" style="fill:#c9ccd1">Breakeven</text>`;
+    content += `<circle cx="${legendX+5}" cy="${legendY}" r="4" fill="${THEME.bg}" stroke="${THEME.breakeven}" stroke-width="1.6"/>`;
+    content += `<text x="${legendX+15}" y="${legendY+4}" text-anchor="start" style="fill:${THEME.legend}">Breakeven</text>`;
   }
 
   return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Payoff et P&amp;L à maturité">${content}</svg>`;
@@ -591,9 +606,9 @@ $('form-phoenix').addEventListener('submit', async (e) => {
 
     const niv = data.niveaux;
     const markers = [
-      niv.autocall !== null ? {x: niv.autocall, label: 'Rappel', color: '#5cc8ff'} : null,
-      {x: niv.coupon, label: 'Coupon', color: '#3ddc84'},
-      {x: niv.protection, label: 'Protection', color: '#ff5c5c'},
+      niv.autocall !== null ? {x: niv.autocall, label: 'Rappel', color: THEME.rappel} : null,
+      {x: niv.coupon, label: 'Coupon', color: THEME.coupon},
+      {x: niv.protection, label: 'Protection', color: THEME.protection},
     ].filter(Boolean);
 
     const n = data.obs_dates.length;
@@ -669,8 +684,8 @@ function afficherAutocall(data) {
   chart.innerHTML=renderChart(data.ST_grid,[{key:'payoff',values:data.payoff},{key:'pnl',values:data.pnl}],[],{
     labels:{payoff:'Remboursement à maturité',pnl:'Gain ou perte vs montant investi'},
     xLabel:'Prix du sous-jacent à maturité (même unité que le spot)',
-    markers:[{x:data.niveaux.coupon,label:callable?'Rappel / coupon final':'Coupon final',color:'#5cc8ff'},
-      ...(data.niveaux.protection===null?[]:[{x:data.niveaux.protection,label:'Protection',color:'#ff5c5c'}])],
+    markers:[{x:data.niveaux.coupon,label:callable?'Rappel / coupon final':'Coupon final',color:THEME.rappel},
+      ...(data.niveaux.protection===null?[]:[{x:data.niveaux.protection,label:'Protection',color:THEME.protection}])],
   });
   const chartNote=document.createElement('p');chartNote.className='chart-note';
   chartNote.textContent="Cas où le produit n'a pas été rappelé avant maturité. Tous les coupons accumulés sont versés si le seuil final est atteint, sinon aucun. Les montants sont non actualisés ; le gain ou la perte se mesure par rapport au nominal investi.";
