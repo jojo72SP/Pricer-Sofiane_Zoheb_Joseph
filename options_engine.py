@@ -293,7 +293,7 @@ def profil_extremes(grille, pnl, pnl_en_zero):
     gain = None if pente_droite > 1e-9 else float(tout.max())
     perte = None if pente_droite < -1e-9 else float(tout.min())
     return {"gain_max": gain, "perte_max": perte,
-            "gain_illimite": pente_droite > 1e-9, "perte_illimitee": pente_droite < -1e-9}
+            "gain_illimite": bool(pente_droite > 1e-9), "perte_illimitee": bool(pente_droite < -1e-9)}
 
 
 def grille_spot(S, niveaux, n_points=241, bas=0.5, haut=1.5):
