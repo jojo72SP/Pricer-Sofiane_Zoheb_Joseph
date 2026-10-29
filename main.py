@@ -4,6 +4,11 @@ import numpy as np
 from market_data_engine import search_tickers, get_spot, get_devise, get_vix, get_vol_historique
 from strutu_engine import (analyse_phoenix, payoff_phoenix_maturite,
                            analyse_autocall_plain)
+from options_engine import analyser_option
+from strategies_engine import analyser_strategie, STRATEGIES, strikes_par_defaut
+from fixings_engine import (analyser_accumulateur, analyser_dra, strike_zero_cout,
+                            FREQUENCES_CONSTAT, FREQUENCES_PAIEMENT)
+import greeks_engine
 app = Flask(__name__)
 N_SIM_MIN = 1000
 N_SIM_MAX = 500000
@@ -289,6 +294,17 @@ def api_phoenix():
         # P&L du client : il a payé le nominal (100 %), pas le prix théorique
         pnl = payoff_total - nominal
 
+        # grecs par différences finies (mêmes tirages) ; sans bloquer le prix en cas d'échec
+        grecs = None
+        if _to_bool(data.get("avec_grecs", True), "avec_grecs"):
+            try:
+                grecs = greeks_engine.grecs_phoenix(
+                    r, q, sigma, obs_dates, K_auto, B_phoenix, B_pdi, coupon,
+                    min(n_simulations, 100000), memory, has_autocall, bonus_threshold,
+                    bonus_amount, strike_pct, seed if seed is not None else 42)
+            except Exception:
+                grecs = None
+
         # petit raccourci que je me suis fait pour passer en % arrondi
         def pct(x):
             return round(100 * float(x), 4)
@@ -313,6 +329,7 @@ def api_phoenix():
             "ST_grid": [round(float(x), 4) for x in ST_grid],
             "payoff": [round(float(x), 4) for x in payoff_total],
             "pnl": [round(float(x), 4) for x in pnl],
+            "grecs": grecs,
         })
 
     except KeyError as e:
@@ -376,6 +393,14 @@ def api_autocall():
         arguments = dict(S0=S0, r=r, q=q, sigma=sigma, obs_dates=dates, K_auto=K_auto,
                          B_pdi=B_pdi, coupon=coupon, n_simulations=int(n), seed=int(seed))
         res = analyse_autocall_plain(**arguments, first_call_date=premiere, has_autocall=has_autocall)
+        grecs = None
+        if _to_bool(data.get("avec_grecs", True), "avec_grecs"):
+            try:
+                grecs = greeks_engine.grecs_plain(r, q, sigma, dates, K_auto, B_pdi, coupon,
+                                                  min(int(n), 100000), premiere, has_autocall,
+                                                  seed=int(seed))
+            except Exception:
+                grecs = None
         # Remboursement final du Plain, sous l'hypothèse d'absence de rappel.
         niveaux = {"autocall": K_auto * S0 if has_autocall else None, "coupon": K_auto * S0,
                    "protection": None if B_pdi is None else B_pdi * S0}
@@ -410,11 +435,258 @@ def api_autocall():
             "coupon_pct": coupon * 100, "K_auto_pct": K_auto * 100,
             "B_pdi_pct": None if B_pdi is None else B_pdi * 100,
             "first_call_date": premiere, "n_simulations": int(n), "seed": int(seed),
+            "grecs": grecs,
         })
     except (TypeError, ValueError, OverflowError) as e:
         return _err(str(e))
     except Exception:
         return _err("Le calcul autocall a échoué. Vérifiez les paramètres et réessayez.", 500)
+
+
+# =====================================================================
+# Options, stratégies, accumulateur / décumulateur, DRA Daily
+# Mêmes conventions que plus haut : entrées en % (r, q, sigma, barrières),
+# calculs en décimal, sorties en % avec le suffixe _pct.
+# =====================================================================
+
+N_SIM_STEPS_MAX = 30_000_000     # simulations x constats simulés, au maximum
+N_SIM_GRECS_FIXINGS = 20_000     # les grecs par différences finies relancent ~14 simulations
+
+
+def _nombre(data, cle, defaut=None):
+    """Lit un nombre fini dans le JSON (erreur claire sinon)."""
+    valeur = data.get(cle, defaut)
+    if isinstance(valeur, bool) or valeur in (None, ""):
+        raise ValueError(f"Paramètre manquant ou invalide : {cle}.")
+    valeur = float(valeur)
+    if not np.isfinite(valeur):
+        raise ValueError(f"Le paramètre {cle} doit être un nombre fini.")
+    return valeur
+
+
+def _json_dict():
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        raise ValueError("Le formulaire doit être un objet JSON.")
+    return data
+
+
+def _marche(data):
+    """Lit et vérifie spot, taux, dividende et volatilité à t0 (r, q, sigma reçus en %)."""
+    S0 = _nombre(data, "S0")
+    r, q, sigma = _nombre(data, "r") / 100, _nombre(data, "q", 0) / 100, _nombre(data, "sigma") / 100
+    if not 0 < S0 <= 1e9:
+        raise ValueError("Le spot doit être strictement positif.")
+    if sigma <= 0 or sigma > SIGMA_MAX:
+        raise ValueError(f"La volatilité doit être comprise entre 0 (exclu) et {SIGMA_MAX:.0%}.")
+    if abs(r) > TAUX_MAX:
+        raise ValueError(f"Taux de {r:.0%} irréaliste (entre -{TAUX_MAX:.0%} et {TAUX_MAX:.0%}).")
+    if not 0 <= q <= TAUX_MAX:
+        raise ValueError(f"Le dividende doit être compris entre 0 et {TAUX_MAX:.0%}.")
+    return S0, r, q, sigma
+
+
+def _maturite(data, cle="T"):
+    T = _nombre(data, cle)
+    if not 0 < T <= MATURITE_MAX:
+        raise ValueError(f"La maturité doit être comprise entre 0 (exclu) et {MATURITE_MAX:.0f} ans.")
+    return T
+
+
+def _simulations(data, pas_par_simulation=1):
+    n = _nombre(data, "n_simulations", 50000)
+    if not n.is_integer() or not N_SIM_MIN <= n <= N_SIM_MAX:
+        raise ValueError(f"Le nombre de simulations doit être un entier entre {N_SIM_MIN:,} et "
+                         f"{N_SIM_MAX:,}.".replace(",", " "))
+    if n * pas_par_simulation > N_SIM_STEPS_MAX:
+        raise ValueError("Calcul trop volumineux : réduisez le nombre de simulations ou la fréquence "
+                         "des constats.")
+    seed = _nombre(data, "seed", 42)
+    if not seed.is_integer() or not 0 <= seed <= 2 ** 32 - 1:
+        raise ValueError("La graine doit être un entier entre 0 et 4 294 967 295.")
+    return int(n), int(seed)
+
+
+def _methode(data):
+    methode = data.get("methode", "bs")
+    if methode not in ("bs", "mc"):
+        raise ValueError("La méthode doit être 'bs' (Black-Scholes) ou 'mc' (Monte Carlo).")
+    return methode
+
+
+def _pct(x):
+    return None if x is None else round(100 * float(x), 4)
+
+
+def _erreurs(exc_valeur):
+    """Gestion commune des erreurs des nouvelles routes."""
+    return _err(str(exc_valeur))
+
+
+@app.post("/api/option")
+def api_option():
+    """Option classique : long/short call/put, prix et grecs en Black-Scholes ou Monte Carlo."""
+    try:
+        data = _json_dict()
+        S0, r, q, sigma = _marche(data)
+        K, T = _nombre(data, "K"), _maturite(data)
+        methode = _methode(data)
+        n, seed = _simulations(data)
+        res = analyser_option(data.get("type"), data.get("position"), S0, K, T, r, q, sigma,
+                              methode, n, seed)
+        res["parametres"] = {"S0": S0, "K": K, "T": T, "r_pct": r * 100, "q_pct": q * 100,
+                             "sigma_pct": sigma * 100}
+        return jsonify(res)
+    except (TypeError, ValueError, OverflowError) as e:
+        return _erreurs(e)
+    except Exception:
+        return _err("Le calcul de l'option a échoué. Vérifiez les paramètres et réessayez.", 500)
+
+
+@app.get("/api/strategies")
+def api_strategies():
+    """Catalogue des stratégies du cours (nom, construction, vue de marché, paramètres à saisir)."""
+    return jsonify({"strategies": [{"cle": cle, **info} for cle, info in STRATEGIES.items()]})
+
+
+@app.post("/api/strategie")
+def api_strategie():
+    """Stratégie d'options du cours : coût net, grecs agrégés, profil de gain, points morts."""
+    try:
+        data = _json_dict()
+        nom = data.get("strategie")
+        if nom not in STRATEGIES:
+            raise ValueError("Stratégie inconnue.")
+        S0, r, q, sigma = _marche(data)
+        methode = _methode(data)
+        n, seed = _simulations(data)
+        params = {"T": _maturite(data), "sens": data.get("sens", "haussier")}
+        defauts = strikes_par_defaut(nom, S0)
+        for cle in STRATEGIES[nom]["parametres"]:
+            params[cle] = _nombre(data, cle, defauts[cle])
+        res = analyser_strategie(nom, S0, params, r, q, sigma, methode, n, seed)
+        res["parametres"] = {"S0": S0, **{k: v for k, v in params.items()}, "r_pct": r * 100,
+                             "q_pct": q * 100, "sigma_pct": sigma * 100}
+        return jsonify(res)
+    except (TypeError, ValueError, OverflowError) as e:
+        return _erreurs(e)
+    except Exception:
+        return _err("Le calcul de la stratégie a échoué. Vérifiez les paramètres et réessayez.", 500)
+
+
+@app.post("/api/accumulateur")
+def api_accumulateur():
+    """Accumulateur ou décumulateur classique (Monte Carlo) avec grecs et strike zéro coût optionnel."""
+    try:
+        data = _json_dict()
+        sens = data.get("sens", "accumulateur")
+        S0, r, q, sigma = _marche(data)
+        T = _maturite(data)
+        frequence = data.get("frequence", "quotidien")
+        if frequence not in FREQUENCES_CONSTAT:
+            raise ValueError("La fréquence doit être 'quotidien', 'hebdomadaire' ou 'mensuel'.")
+        n_fix = max(1, round(T * FREQUENCES_CONSTAT[frequence]))
+        n, seed = _simulations(data, pas_par_simulation=n_fix)
+        accu = sens == "accumulateur"
+        strike_pct = _nombre(data, "strike_pct", 90 if accu else 110) / 100
+        ko_pct = _nombre(data, "ko_pct", 105 if accu else 95) / 100
+        levier = _nombre(data, "levier", 2)
+        quantite = _nombre(data, "quantite", 1)
+        n_garanti = int(_nombre(data, "n_garanti", 0))
+        livraison_au_ko = _to_bool(data.get("livraison_au_ko", False), "livraison_au_ko")
+        arguments = dict(sens=sens, S0=S0, r=r, q=q, sigma=sigma, T=T, strike_pct=strike_pct,
+                         ko_pct=ko_pct, levier=levier, quantite=quantite, frequence=frequence,
+                         n_garanti=n_garanti, livraison_au_ko=livraison_au_ko, seed=seed)
+        res = analyser_accumulateur(**arguments, n_simulations=n)
+        n_grecs = min(n, N_SIM_GRECS_FIXINGS)
+
+        grecs = None
+        if _to_bool(data.get("avec_grecs", True), "avec_grecs"):
+            try:
+                grecs = greeks_engine.grecs_accumulateur(**arguments, n_simulations=n_grecs)
+            except Exception:
+                grecs = None
+
+        strike_zc = None
+        if _to_bool(data.get("zero_cout", False), "zero_cout"):
+            strike_zc = strike_zero_cout(sens, S0, r, q, sigma, T, ko_pct, levier, quantite, frequence,
+                                         n_garanti, livraison_au_ko, n_grecs, seed)
+
+        res.update({
+            "valeur_pct_notionnel": _pct(res["valeur_pct_notionnel"]),
+            "proba_ko_pct": _pct(res["proba_ko"]),
+            "proba_ko_cumulee_pct": [_pct(p) for p in res["proba_ko_cumulee"]],
+            "proba_levier_pct": _pct(res["proba_levier"]),
+            "strike_pct": strike_pct * 100, "ko_pct": ko_pct * 100,
+            "strike_zero_cout_pct": _pct(strike_zc),
+            "grecs": grecs,
+            "parametres": {"S0": S0, "T": T, "r_pct": r * 100, "q_pct": q * 100,
+                           "sigma_pct": sigma * 100, "levier": levier, "quantite": quantite,
+                           "n_garanti": n_garanti, "livraison_au_ko": livraison_au_ko, "seed": seed},
+        })
+        return jsonify(res)
+    except (TypeError, ValueError, OverflowError) as e:
+        return _erreurs(e)
+    except Exception:
+        return _err("Le calcul de l'accumulateur a échoué. Vérifiez les paramètres et réessayez.", 500)
+
+
+@app.post("/api/dra")
+def api_dra():
+    """DRA Daily : coupon proportionnel aux jours passés dans la fourchette, capital garanti."""
+    try:
+        data = _json_dict()
+        S0, r, q, sigma = _marche(data)
+        T = _maturite(data)
+        methode = _methode(data)
+        nominal = _nombre(data, "nominal", 1000)
+        if not 0 < nominal <= 1e12:
+            raise ValueError("Le nominal doit être strictement positif.")
+        frequence_paiement = data.get("frequence_paiement", "trimestriel")
+        if frequence_paiement not in FREQUENCES_PAIEMENT:
+            raise ValueError("La fréquence de paiement doit être 'mensuel', 'trimestriel', "
+                             "'semestriel' ou 'annuel'.")
+        n, seed = _simulations(data, pas_par_simulation=max(1, round(T * 252)) if methode == "mc" else 1)
+        bas = _nombre(data, "borne_basse_pct", 90) / 100
+        haut = _nombre(data, "borne_haute_pct", 110) / 100
+        coupon = _nombre(data, "coupon_annuel", 8) / 100
+        if coupon > COUPON_MAX:
+            raise ValueError(f"Coupon annuel de {coupon:.0%} irréaliste (max {COUPON_MAX:.0%}).")
+        arguments = dict(S0=S0, r=r, q=q, sigma=sigma, T=T, borne_basse_pct=bas, borne_haute_pct=haut,
+                         coupon_annuel=coupon, frequence_paiement=frequence_paiement, seed=seed)
+        res = analyser_dra(methode, **arguments, n_simulations=n)
+
+        grecs = None
+        if _to_bool(data.get("avec_grecs", True), "avec_grecs"):
+            try:
+                grecs = greeks_engine.grecs_dra(methode, r, q, sigma, T, bas, haut, coupon,
+                                                frequence_paiement,
+                                                min(n, N_SIM_GRECS_FIXINGS), seed)
+            except Exception:
+                grecs = None
+
+        res.update({
+            "prix_pct": _pct(res["prix"]), "prix": round(res["prix"] * nominal, 4),
+            "ic95_pct": None if res["ic95"] is None else [_pct(v) for v in res["ic95"]],
+            "marge_emetteur_pct": _pct(res["marge_emetteur"]),
+            "valeur_capital_pct": _pct(res["valeur_capital"]),
+            "valeur_coupons_pct": _pct(res["valeur_coupons"]),
+            "presence_moyenne_pct": _pct(res["presence_moyenne"]),
+            "coupon_annualise_espere_pct": _pct(res["coupon_annualise_espere"]),
+            "presence_par_periode_pct": [_pct(v) for v in res["presence_par_periode"]],
+            "coupons_espere_par_periode_pct": [_pct(v) for v in res["coupons_espere_par_periode"]],
+            "proba_coupon_nul_pct": _pct(res["proba_coupon_nul"]),
+            "coupon_annuel_pct": coupon * 100, "nominal": nominal,
+            "grecs": grecs,
+            "parametres": {"S0": S0, "T": T, "r_pct": r * 100, "q_pct": q * 100,
+                           "sigma_pct": sigma * 100, "seed": seed},
+        })
+        return jsonify(res)
+    except (TypeError, ValueError, OverflowError) as e:
+        return _erreurs(e)
+    except Exception:
+        return _err("Le calcul du DRA a échoué. Vérifiez les paramètres et réessayez.", 500)
+
 
 if __name__ == "__main__":
     import os
