@@ -278,12 +278,17 @@ def _valider_autocall(S0, r, q, sigma, obs_dates, K_auto, B_pdi, coupon,
 
 
 def _flux_autocall(prix, S0, dates, K_auto, B_pdi, coupon, has_autocall,
-                   first_call_date):
+                   first_call_date, strike_pct=1.0):
     """Suit les remboursements de trajectoires déjà simulées.
 
     Montants en fraction du nominal. La colonne 0 de prix contient S0.
     La protection est observée uniquement à maturité (barrière européenne).
+    Les barrières et le remboursement se lisent par rapport au niveau de
+    référence strike_pct * S0 (comme pour le Phoenix). Avec strike_pct = 1,
+    c'est exactement S0 ; un autre strike_pct sert à bouger le spot en
+    gardant le strike initial fixe (calcul des grecs).
     """
+    S0 = strike_pct * S0   # niveau de référence : toutes les barrières s'y rapportent
     n_simulations = prix.shape[0]
     n_dates = len(dates)
     rappele = np.zeros(n_simulations, dtype=bool)
@@ -330,7 +335,7 @@ def _flux_autocall(prix, S0, dates, K_auto, B_pdi, coupon, has_autocall,
 
 
 def _analyse_autocall(S0, r, q, sigma, obs_dates, K_auto, B_pdi, coupon,
-                       n_simulations, has_autocall, first_call_date, seed):
+                       n_simulations, has_autocall, first_call_date, seed, strike_pct=1.0):
     """Calcul commun : simulation indépendante, suivi des flux, puis statistiques."""
     dates = _valider_autocall(S0, r, q, sigma, obs_dates, K_auto, B_pdi, coupon,
                               n_simulations, first_call_date)
@@ -341,7 +346,7 @@ def _analyse_autocall(S0, r, q, sigma, obs_dates, K_auto, B_pdi, coupon,
     if not np.all(np.isfinite(prix)):
         raise ValueError("Simulation non finie : vérifiez les paramètres de marché.")
     res = _flux_autocall(prix, S0, dates, K_auto, B_pdi, coupon,
-                         has_autocall, first_call_date)
+                         has_autocall, first_call_date, strike_pct)
 
     actualisation = np.exp(-r * res["date_paiement"])
     flux = (res["remboursement"] + res["coupons"]) * actualisation
@@ -374,7 +379,8 @@ def _analyse_autocall(S0, r, q, sigma, obs_dates, K_auto, B_pdi, coupon,
 
 
 def analyse_autocall_plain(S0, r, q, sigma, obs_dates, K_auto, B_pdi, coupon,
-                            n_simulations=50000, first_call_date=None, seed=None, has_autocall=True):
+                            n_simulations=50000, first_call_date=None, seed=None, has_autocall=True,
+                            strike_pct=1.0):
     """Autocall Plain : coupon accumulé jusqu'au rappel ou à maturité.
 
     Conventions identiques au Phoenix : r, q, sigma et coupon en décimal,
@@ -394,4 +400,4 @@ def analyse_autocall_plain(S0, r, q, sigma, obs_dates, K_auto, B_pdi, coupon,
     nominal et les coupons accumulés. Ce n'est pas un Phoenix à coupons périodiques.
     """
     return _analyse_autocall(S0, r, q, sigma, obs_dates, K_auto, B_pdi, coupon,
-                              n_simulations, has_autocall, first_call_date, seed)
+                              n_simulations, has_autocall, first_call_date, seed, strike_pct)
