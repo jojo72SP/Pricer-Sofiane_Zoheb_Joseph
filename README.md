@@ -1,6 +1,14 @@
-# Pricer autonome de produits structurés
+# Pricer d'options et de produits structurés
 
-Cette copie contient uniquement **Phoenix** et **Autocall Plain**. Le projet Pricer_option d'origine est conservé intact. Les écrans Options, Forward, Stratégies et Chantier ont été retirés. Le mode sans rappel est une option du Plain, sans troisième entrée au menu.
+Pricer Python (Flask) construit autour du cours d'options de la S&P Academy. Trois onglets :
+
+1. **Options vanilles** : long/short call et put, valeur intrinsèque et valeur temps, profil de gain, grecs.
+2. **Stratégies** : 11 stratégies du chapitre 3 (covered call, protective put, long/short straddle, long/short strangle, bull call spread, bear put spread, collar, risk reversal, forward synthétique).
+3. **Produits structurés** : Phoenix, Athéna (Autocall Plain), accumulateur, décumulateur et DRA Daily.
+
+Un bloc **Paramètres de marché à t₀** (spot, volatilité, taux, dividende) alimente les trois onglets. Un bouton bascule la valorisation entre **Black-Scholes** (formule fermée) et **Monte Carlo** quand les deux existent. Tous les produits affichent leurs **grecs** (primaires et principaux secondaires).
+
+Guide du code ajouté : [README_NOUVEAUX_MOTEURS.md](README_NOUVEAUX_MOTEURS.md).
 
 ## Lancer sur ton Mac
 
@@ -30,9 +38,15 @@ Ctrl + C arrête le serveur. Après modification Python, arrêter puis relancer 
 
 ## Utilisation
 
-Le Phoenix est sélectionné au lancement. Le menu permet de passer à l'Autocall Plain. Le style terminal et les formulaires harmonisés sont conservés.
+Les trois onglets (Options vanilles, Stratégies, Produits structurés) partagent le bloc « Paramètres de marché » en haut de page : spot S₀, source et valeur de la volatilité à t₀, taux r, dividende q, méthode de valorisation (Black-Scholes ou Monte Carlo), nombre de simulations et graine.
 
-Sans ticker, le niveau initial est 100 et les paramètres se saisissent manuellement : le pricing fonctionne sans Yahoo Finance. Pour charger le marché, chercher puis sélectionner un ticker ; le spot et les volatilités disponibles sont récupérés. Choisir Manuelle, Historique (1 an) ou VIX. Le taux et le dividende restent ceux saisis. Le VIX est celui du S&P 500, pas la volatilité implicite propre au titre. Si le VIX est indisponible, le spot et la volatilité historique peuvent quand même être utilisés.
+| Produit | Black-Scholes | Monte Carlo |
+|---|---|---|
+| Options, stratégies | oui (formules du cours) | oui |
+| DRA Daily | oui (somme de probabilités digitales) | oui |
+| Phoenix, Athéna, accumulateur, décumulateur | non (barrières observées aux constats) | oui, seule méthode |
+
+Sans ticker, le spot (100 par défaut) et la volatilité à t₀ se saisissent dans ce bloc : le pricing fonctionne sans Yahoo Finance. Pour charger le marché, chercher puis sélectionner un ticker ; le spot et les volatilités disponibles sont récupérés. Choisir Manuelle, Historique (1 an) ou VIX. Le taux et le dividende restent ceux saisis. Le VIX est celui du S&P 500, pas la volatilité implicite propre au titre. Si le VIX est indisponible, le spot et la volatilité historique peuvent quand même être utilisés.
 
 Le coupon est exprimé **par observation**, pas par an : 4 % avec des constats semestriels signifie 4 % par semestre. Les valeurs du formulaire sont en pourcentage ; le moteur reçoit des décimaux.
 
@@ -49,11 +63,15 @@ Le graphique Phoenix représente seulement le remboursement final des scénarios
 
 ## Fichiers
 
-- `main.py` : serveur Flask et routes `/`, `/api/search_ticker`, `/api/market/<ticker>`, `/api/phoenix`, `/api/autocall`.
+- `main.py` : serveur Flask et routes `/`, `/api/search_ticker`, `/api/market/<ticker>`, `/api/phoenix`, `/api/autocall`, `/api/option`, `/api/strategies`, `/api/strategie`, `/api/accumulateur`, `/api/dra`.
+- `options_engine.py` : Black-Scholes, Monte Carlo et grecs d'une option.
+- `strategies_engine.py` : les 11 stratégies du cours.
+- `fixings_engine.py` : accumulateur, décumulateur, DRA Daily.
+- `greeks_engine.py` : grecs par différences finies (Phoenix, Athéna, accumulateur, DRA).
 - `strutu_engine.py` : moteurs Phoenix et Plain.
 - `market_data_engine.py` : données de marché utiles au pricing.
 - `volatility_engine.py` : rendements et volatilité historique nécessaires aux paramètres.
-- `templates/index.html` : interface des deux produits.
+- `templates/index.html`, `static/style.css`, `static/app.js` : interface (structure, apparence, logique). `static/logo.svg` est le logo : remplacer ce fichier suffit à le changer ; les couleurs sont les variables en tête de `style.css`.
 - `requirements.txt` : bibliothèques nécessaires.
 - `tests/` : vérifications des routes et des mécanismes.
 
@@ -65,7 +83,9 @@ Aucun import de `pricer_engine.py` ni de `rates_engine.py` n'est nécessaire. Le
 python -m unittest discover -s tests -v
 ```
 
-Les tests automatisés couvrent le Plain déterministe, les coupons, les unités, les erreurs, le report du rappel, le Phoenix, les pertes sur toutes les trajectoires et l'absence des routes supprimées. Les moteurs sont comparés à ceux du projet d'origine avec la même graine pour vérifier l'identité des résultats.
+`tests/test_nouveaux_moteurs.py` (37 tests) vérifie des propriétés financières : parité call-put, grecs analytiques contre différences finies, signes du tableau du chapitre 10, formules du cours pour les stratégies, accumulateur à volatilité quasi nulle (valeur calculable à la main), strike zéro coût, égalité Black-Scholes / Monte Carlo du DRA, et toutes les routes.
+
+Les tests automatisés des deux produits d'origine couvrent le Plain déterministe, les coupons, les unités, les erreurs, le report du rappel, le Phoenix, les pertes sur toutes les trajectoires et l'absence des routes supprimées. Les moteurs sont comparés à ceux du projet d'origine avec la même graine pour vérifier l'identité des résultats.
 
 ## Présentation harmonisée des résultats
 

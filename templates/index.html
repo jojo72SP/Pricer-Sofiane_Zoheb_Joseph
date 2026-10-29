@@ -3,743 +3,247 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PRICER — Produits structurés</title>
+<title>Pricer — Options et produits structurés</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-/* Terminal de marché : fond noir, texte ambre, bandeaux bleus, chiffres en chasse fixe. */
-:root{
-  --bg:#000;            /* fond de l'écran */
-  --panel:#07090d;      /* fond des panneaux */
-  --bar:#102a52;        /* bandeaux de titre bleus */
-  --line:#262b33;       /* séparateurs */
-  --amber:#ffa028;      /* couleur maîtresse : titres, saisies, focus */
-  --yellow:#f5d547;     /* mise en avant ponctuelle */
-  --text:#e6e6e6;       /* valeurs */
-  --muted:#8a8f98;      /* libellés secondaires */
-  --cyan:#5cc8ff;
-  --green:#3ddc84;
-  --red:#ff5c5c;
-  --mono:'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-  --cond:'IBM Plex Sans Condensed', 'Arial Narrow', system-ui, sans-serif;
-}
-*{box-sizing:border-box}
-html{color-scheme:dark}
-body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 var(--cond)}
-
-/* --- Barre de commande en haut --- */
-.topbar{display:flex;align-items:stretch;border-bottom:1px solid var(--line);background:#000;font-family:var(--mono);font-size:13px}
-.brand{background:var(--amber);color:#000;font-weight:600;padding:8px 14px;letter-spacing:.06em}
-.cmd{flex:1;display:flex;align-items:center;gap:10px;padding:0 14px;color:var(--amber);min-width:0}
-.cmd .prompt{color:var(--muted)}
-.cmd .go{border:1px solid var(--green);color:var(--green);padding:0 6px;font-size:11px;line-height:18px}
-.cmd .caret{display:inline-block;width:8px;height:15px;background:var(--amber);animation:blink 1.1s steps(1) infinite;vertical-align:-2px}
-.cmd .desc{color:var(--muted);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.clock{padding:0 14px;display:flex;align-items:center;gap:12px;color:var(--yellow);font-variant-numeric:tabular-nums;white-space:nowrap}
-.clock .live{color:var(--green)}
-.clock .live::before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);margin-right:6px;vertical-align:1px}
-@keyframes blink{50%{opacity:0}}
-
-main{max-width:1320px;margin:auto;padding:14px 16px 28px}
-
-/* --- Menu des fonctions, numérotées comme sur un terminal --- */
-.tabs{display:flex;flex-wrap:wrap;gap:2px;margin-bottom:12px;border-bottom:1px solid var(--line)}
-.tab{background:none;border:0;border-bottom:2px solid transparent;color:var(--text);font:500 14px var(--cond);padding:8px 14px 7px;cursor:pointer}
-.tab .key{color:var(--amber);font-family:var(--mono);font-size:12px;margin-right:4px}
-.tab:hover{background:#0e1218}
-.tab.active{background:var(--bar);border-bottom-color:var(--amber);color:#fff}
-.tab:focus-visible{outline:1px solid var(--amber);outline-offset:-1px}
-
-.grid{display:grid;grid-template-columns:340px minmax(0,1fr);gap:12px;align-items:start}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:2px}
-.grid > .card{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow-y:auto;scrollbar-color:#333 transparent}
-form{padding:0 14px 16px}
-
-/* Titres de section : bandeau bleu pleine largeur, texte ambre */
-h2{margin:0 -14px 12px;padding:5px 14px;background:var(--bar);color:var(--amber);font:600 12px var(--mono);text-transform:uppercase;letter-spacing:.08em}
-form h2{margin-top:0}
-form h2 + .fields, form h2 + .hint{margin-top:0}
-.chart-card h2{margin:-14px -14px 12px}
-
-.fields{display:grid;grid-template-columns:1fr 1fr;gap:10px 10px;margin-bottom:16px}
-.full{grid-column:1/-1}
-label{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-bottom:3px}
-input,select{width:100%;background:#0d0f13;border:1px solid #343a44;border-radius:2px;color:var(--amber);padding:6px 8px;font:500 14px var(--mono);min-height:32px;font-variant-numeric:tabular-nums}
-input::placeholder{color:#5b616b}
-input:disabled{color:var(--muted);background:#0a0b0e}
-input:focus,select:focus{outline:none;border-color:var(--amber);box-shadow:0 0 0 1px var(--amber)}
-input:invalid:not(:focus):not(:placeholder-shown){border-color:var(--red)}
-select{appearance:none;cursor:pointer;padding-right:26px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0h10L5 6z' fill='%23ffa028'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center}
-select:disabled{opacity:.7;cursor:default}
-input[type=number]::-webkit-inner-spin-button{opacity:.35}
-.hint{font-size:12px;color:var(--muted);margin:6px 0 0}
-.check{display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:500;color:var(--text);cursor:pointer;margin:0}
-.check input{width:14px;height:14px;min-height:0;margin:2px 0 0;accent-color:var(--amber);flex:none}
-
-details{border-top:1px solid var(--line);padding-top:10px;margin-bottom:12px}
-details summary{cursor:pointer;color:var(--amber);font:500 12px var(--mono);text-transform:uppercase;letter-spacing:.06em;list-style:none}
-details summary::-webkit-details-marker{display:none}
-details summary::before{content:'+ ';color:var(--muted)}
-details[open] summary::before{content:'− '}
-
-button.primary{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin-top:4px;border:0;border-radius:2px;background:var(--amber);color:#000;padding:9px 14px;font:600 13px var(--mono);letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
-button.primary::after{content:'GO';font-size:10px;border:1px solid #000;padding:0 5px;line-height:15px}
-button.primary:hover{background:#ffb34f}
-button.primary:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
-button.primary:disabled{opacity:.55;cursor:wait}
-.status{font:12px var(--mono);color:var(--green);margin:8px 0 0;min-height:18px}
-.status.error{color:var(--red)}
-
-/* --- Résultats --- */
-.results{display:flex;flex-direction:column;gap:12px;min-width:0}
-.metrics{display:grid;grid-template-columns:repeat(3,1fr);background:var(--panel);border:1px solid var(--line);border-bottom:0;border-radius:2px}
-.metric{padding:10px 14px 12px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);min-width:0}
-.metric:nth-child(3n){border-right:0}
-.metric p{margin:0 0 2px;font:500 11px var(--mono);color:var(--amber);text-transform:uppercase;letter-spacing:.06em}
-.metric strong{display:block;font:500 24px var(--mono);color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.metric strong.pos{color:var(--green)}
-.metric strong.neg{color:var(--red)}
-.chart-card{padding:14px}
-svg{width:100%;height:auto;display:block}
-svg text{font:11px var(--mono);fill:var(--muted)}
-.greeks-table{width:100%;border-collapse:collapse;font:13px var(--mono);font-variant-numeric:tabular-nums}
-.greeks-table th,.greeks-table td{text-align:left;padding:5px 8px;border-bottom:1px solid #161a20}
-.greeks-table th{color:var(--muted);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.06em}
-.greeks-table td:first-child{color:var(--amber)}
-.greeks-table td:not(:first-child){text-align:right;color:var(--text)}
-.greeks-table th:not(:first-child){text-align:right}
-.greeks-table tbody tr:nth-child(even){background:#0b0e13}
-.greeks-table tbody tr:hover{background:#121823}
-.chart-card details{border-top:0;margin:12px 0 0;padding-top:0}
-.chart-note{font-size:12px;color:var(--muted);margin:10px 0 0}
-.empty{border:1px dashed #2c323b;color:var(--muted);font:13px var(--mono);padding:48px 16px;text-align:center}
-.empty::after{content:'';display:inline-block;width:8px;height:14px;background:var(--amber);margin-left:6px;vertical-align:-2px;animation:blink 1.1s steps(1) infinite}
-.ticker-hit{padding:7px 10px;cursor:pointer;border-bottom:1px solid var(--line);font:13px var(--mono);background:#0d0f13}
-.ticker-hit:hover{background:var(--bar)}
-.ticker-hit strong{color:var(--amber)}
-[hidden]{display:none !important}
-@media (prefers-reduced-motion:reduce){.cmd .caret,.empty::after{animation:none}}
-@media(max-width:900px){
-  .grid{grid-template-columns:1fr}
-  .grid > .card{position:static;max-height:none}
-  .metrics{grid-template-columns:1fr 1fr}
-  .metric:nth-child(3n){border-right:1px solid var(--line)}
-  .metric:nth-child(2n){border-right:0}
-  .clock .date,.cmd .desc{display:none}
-}
-</style>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="icon" href="/static/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
-<header class="topbar">
-  <div class="brand">PRICER</div>
-  <div class="cmd">
-    <span class="prompt">&gt;</span>
-    <span id="cmd-code">STRC</span>
-    <span class="go">&lt;GO&gt;</span>
-    <span class="caret" aria-hidden="true"></span>
-    <span class="desc" id="cmd-desc">Produits structurés</span>
+<header class="masthead">
+  <div class="mast-inner">
+    <img class="logo" src="/static/logo.svg" alt="">
+    <div class="titles">
+      <span class="org">S&amp;P Academy</span>
+      <span class="sub">Pricer d'options et de produits structurés</span>
+    </div>
+    <nav class="chapters" role="tablist" aria-label="Sections du pricer">
+      <button class="tab active" role="tab" aria-selected="true" data-panel="panel-options"><small>Chapitre 2</small>Options vanilles</button>
+      <button class="tab" role="tab" aria-selected="false" data-panel="panel-strategies"><small>Chapitre 3</small>Stratégies</button>
+      <button class="tab" role="tab" aria-selected="false" data-panel="panel-structured"><small>Au-delà du cours</small>Produits structurés</button>
+    </nav>
   </div>
-  <div class="clock"><span class="live">PARIS</span><span class="date" id="clock-date"></span><span id="clock-time"></span></div>
+  <div class="goldrule"></div>
 </header>
 
 <main>
-<section id="panel-structured" class="grid">
-    <div class="card">
-      <div style="padding:0 14px 14px">
-        <h2>Produit</h2>
-        <label for="struct-product">Type de produit structuré</label>
-        <select id="struct-product">
-          <option value="" selected disabled>Choisir un produit</option>
-          <option value="phoenix">Phoenix</option>
-          <option value="autocall_plain">Autocall Plain — coupons accumulés</option>
-        </select>
+
+<!-- ============ Paramètres de marché à t0 (partagés par tous les onglets) ============ -->
+<section class="card market" aria-labelledby="mk-title">
+  <h2 id="mk-title"><span class="num">t₀</span>Paramètres de marché</h2>
+  <div class="market-grid">
+    <div class="wide" style="position:relative">
+      <label for="m-ticker">Sous-jacent (ticker, facultatif)</label>
+      <input id="m-ticker" type="text" placeholder="ex : AAPL, MC.PA, ^GSPC…" autocomplete="off">
+      <div id="m-ticker-results" class="suggest" hidden></div>
+    </div>
+    <div>
+      <label for="m-s0">Spot S₀</label>
+      <input id="m-s0" type="number" value="100" min="0.0001" step="any" required>
+    </div>
+    <div>
+      <label for="m-sigma-source">Volatilité à t₀ : source</label>
+      <select id="m-sigma-source">
+        <option value="manual">Saisie manuelle</option>
+        <option value="hist">Historique (1 an)</option>
+        <option value="vix">VIX (S&amp;P 500)</option>
+      </select>
+    </div>
+    <div>
+      <label for="m-sigma">Volatilité σ à t₀ (%)</label>
+      <input id="m-sigma" type="number" value="25" min="0.01" max="200" step="any" required>
+    </div>
+    <div>
+      <label for="m-r">Taux sans risque r (%)</label>
+      <input id="m-r" type="number" value="3" min="-50" max="50" step="any" required>
+    </div>
+    <div>
+      <label for="m-q">Dividende continu q (%)</label>
+      <input id="m-q" type="number" value="2" min="0" max="50" step="any" required>
+    </div>
+    <div class="wide">
+      <label id="m-method-label">Méthode de valorisation</label>
+      <div class="seg" role="group" aria-labelledby="m-method-label">
+        <button type="button" id="m-bs" aria-pressed="true">Black-Scholes</button>
+        <button type="button" id="m-mc" aria-pressed="false">Monte Carlo</button>
       </div>
-      <form id="form-phoenix" data-product="phoenix" hidden>
-        <h2>Sous-jacent</h2>
-        <div class="fields">
-          <div class="full" style="position:relative">
-            <label for="phx-ticker">Chercher un ticker (facultatif)</label>
-            <input id="phx-ticker" type="text" placeholder="ex : AAPL, MC.PA..." autocomplete="off">
-            <div id="phx-ticker-results" class="card" style="position:absolute;z-index:10;width:100%;margin-top:2px;max-height:180px;overflow-y:auto;" hidden></div>
-            <p id="phx-ticker-status" class="hint">Sans ticker, le sous-jacent part de 100.</p>
-          </div>
-          <div>
-            <label for="phx-sigma-source">Volatilité σ</label>
-            <select id="phx-sigma-source">
-              <option value="manual">Manuelle</option>
-              <option value="hist">Historique (1 an)</option>
-              <option value="vix">VIX (S&amp;P 500)</option>
-            </select>
-          </div>
-          <div id="phx-sigma-manual-wrap"><label for="phx-sigma">σ (%)</label><input id="phx-sigma" type="number" value="25" min="0.01" max="200" step="any" required></div>
-          <div id="phx-sigma-mkt-wrap" hidden><label id="phx-sigma-mkt-label">σ marché</label><input id="phx-sigma-mkt-display" type="text" disabled></div>
-          <div><label for="phx-r">Taux r (%)</label><input id="phx-r" type="number" value="3" min="-50" max="50" step="any" required></div>
-          <div><label for="phx-q">Dividende q (%)</label><input id="phx-q" type="number" value="2" min="0" max="50" step="any" required></div>
-        </div>
+    </div>
+    <div>
+      <label for="m-nsims">Simulations Monte Carlo</label>
+      <input id="m-nsims" type="number" value="50000" min="1000" max="500000" step="1000" required>
+    </div>
+    <div>
+      <label for="m-seed">Graine (reproductibilité)</label>
+      <input id="m-seed" type="number" value="42" min="0" max="4294967295" step="1" required>
+    </div>
+  </div>
+  <p id="m-status" class="hint">Sans ticker, saisis le spot et la volatilité à la main. Avec un ticker, la volatilité historique et le VIX sont proposés ; la source « manuelle » reste modifiable à tout moment.</p>
+</section>
 
-        <h2>Durée</h2>
-        <div class="fields">
-          <div><label for="phx-nominal">Montant investi</label><input id="phx-nominal" type="number" value="1000" min="1" step="any" required></div>
-          <div><label for="phx-freq">Observations</label>
-            <select id="phx-freq">
-              <option value="1">Annuelles</option>
-              <option value="2" selected>Semestrielles</option>
-              <option value="4">Trimestrielles</option>
-              <option value="12">Mensuelles</option>
-            </select>
-          </div>
-          <div class="full"><label for="phx-months">Maturité (mois)</label>
-            <input id="phx-months" type="number" value="36" min="6" max="360" step="6" required>
-            <p class="hint" id="phx-dates-hint"></p>
-          </div>
-        </div>
-
-        <h2>Coupons</h2>
-        <div class="fields">
-          <div class="full"><label for="phx-coupon">Coupon par période (%)</label><input id="phx-coupon" type="number" value="4" min="0" max="100" step="any" required></div>
-          <label class="check full"><input id="phx-stepup-on" type="checkbox"> Coupon step-up : il augmente à chaque période</label>
-          <div class="full" id="phx-stepup-wrap" hidden><label for="phx-stepup">Hausse par période (%)</label><input id="phx-stepup" type="number" value="0.5" min="0.01" max="10" step="any"></div>
-          <label class="check full"><input id="phx-memory" type="checkbox"> Effet mémoire : un coupon manqué est rattrapé plus tard</label>
-        </div>
-
-        <h2>Barrières</h2>
-        <p class="hint" style="margin:0 0 10px">En % du niveau du sous-jacent au lancement.</p>
-        <div class="fields">
-          <label class="check full"><input id="phx-autocall" type="checkbox" checked> Remboursement anticipé possible (autocall)</label>
-          <div class="full"><label for="phx-kauto">Remboursement anticipé (%)</label>
-            <input id="phx-kauto" type="number" value="100" min="1" max="300" step="any" required>
-            <p class="hint" id="phx-kauto-hint"></p></div>
-          <div class="full"><label for="phx-bcoupon">Coupon versé (%)</label>
-            <input id="phx-bcoupon" type="number" value="70" min="1" max="300" step="any" required>
-            <p class="hint" id="phx-bcoupon-hint"></p></div>
-          <div class="full"><label for="phx-bpdi">Capital protégé (%)</label>
-            <input id="phx-bpdi" type="number" value="60" min="1" max="300" step="any" required>
-            <p class="hint" id="phx-bpdi-hint"></p></div>
-        </div>
-
-        <details style="margin-top:14px">
-          <summary>Bonus (facultatif)</summary>
-          <div class="fields" style="margin-top:12px">
-            <div><label for="phx-bonus-threshold">Seuil du bonus (%)</label><input id="phx-bonus-threshold" type="number" min="1" max="300" step="any" placeholder="aucun"></div>
-            <div><label for="phx-bonus-amount">Bonus (% investi)</label><input id="phx-bonus-amount" type="number" value="0" min="0" max="100" step="any"></div>
-          </div>
-        </details>
-
-        <div class="fields" style="margin-top:16px">
-          <div class="full"><label for="phx-nsims">Nombre de simulations Monte Carlo</label><input id="phx-nsims" type="number" value="50000" min="1000" max="500000" step="1000" required>
-            <p class="hint">Plus il y en a, plus le prix est précis, mais plus le calcul est long.</p></div>
-        </div>
-
-        <button class="primary" type="submit">Calculer</button>
-        <p id="phx-status" class="status" role="status" aria-live="polite"></p>
-      </form>
-<form id="form-autocall_plain" data-product="autocall_plain" hidden>
-      <h2>Sous-jacent</h2>
+<!-- ============ I. Options vanilles ============ -->
+<section id="panel-options" class="grid">
+  <div class="card side">
+    <h2><span class="num">I</span>Option</h2>
+    <p class="course-note"><b>Cours, ch. 2.4–2.5 et 7–9.</b> Valeur intrinsèque et valeur temps, payoffs, formule de Black–Scholes et grecs.</p>
+    <form id="form-option" novalidate>
       <div class="fields">
-        <div class="full" style="position:relative"><label for="ac-plain-ticker">Chercher un ticker (facultatif)</label>
-          <input id="ac-plain-ticker" autocomplete="off" placeholder="ex : AAPL, MC.PA…">
-          <div id="ac-plain-suggestions" class="card" style="position:absolute;z-index:10;width:100%;max-height:180px;overflow:auto" hidden></div>
-          <p id="ac-plain-market-status" class="hint" role="status">Sans ticker, le sous-jacent part de 100.</p>
-        </div><input id="ac-plain-s0" type="hidden" value="100">
-        <div><label for="ac-plain-sigma-source">Volatilité σ</label>
-          <select id="ac-plain-sigma-source"><option value="manual">Manuelle</option><option value="hist">Historique (1 an)</option><option value="vix">VIX (S&amp;P 500)</option></select>
-        </div>
-        <div id="ac-plain-sigma-manual-wrap"><label for="ac-plain-sigma">σ (%)</label><input id="ac-plain-sigma" type="number" value="25" min="0.01" max="200" step="any" required></div>
-        <div id="ac-plain-sigma-mkt-wrap" hidden><label id="ac-plain-sigma-mkt-label">σ marché</label><input id="ac-plain-sigma-mkt-display" type="text" disabled></div><div class=""><label for="ac-plain-r">Taux r (%)</label><input id="ac-plain-r" type="number" value="3" min="-50" max="50" step="any" required></div><div class=""><label for="ac-plain-q">Dividende q (%)</label><input id="ac-plain-q" type="number" value="2" min="0" max="50" step="any" required></div>
+        <div><label for="opt-type">Type</label>
+          <select id="opt-type"><option value="call">Call</option><option value="put">Put</option></select></div>
+        <div><label for="opt-side">Position</label>
+          <select id="opt-side"><option value="long">Long (acheteur)</option><option value="short">Short (vendeur)</option></select></div>
+        <div><label for="opt-k">Strike K</label>
+          <input id="opt-k" type="number" value="100" min="0.0001" step="any" required></div>
+        <div><label for="opt-months">Maturité (mois)</label>
+          <input id="opt-months" type="number" value="6" min="0.1" max="360" step="any" required></div>
       </div>
-      <h2>Durée et nominal</h2><div class="fields"><div class=""><label for="ac-plain-nominal">Montant investi</label><input id="ac-plain-nominal" type="number" value="1000" min="0.01" max="1000000000000.0" step="any" required></div><div><label for="ac-plain-freq">Observations</label><select id="ac-plain-freq"><option value="1">Annuelles</option><option value="2" selected>Semestrielles</option><option value="4">Trimestrielles</option><option value="12">Mensuelles</option></select></div><div class="full"><label for="ac-plain-months">Maturité (mois)</label><input id="ac-plain-months" type="number" value="36" min="1" max="360" step="1" required></div><div class="full"><label for="ac-plain-first">Premier rappel autorisé à partir de (mois)</label><input id="ac-plain-first" type="number" value="6" min="0" max="360" step="1" required></div></div>
-      <label class="check"><input id="ac-plain-autocall" type="checkbox" checked> Remboursement anticipé possible (autocall)</label>
-      <h2>Coupons et barrières</h2>
-      <p class="hint" style="margin-bottom:12px">Coupons accumulés payés au rappel ; à maturité, tous les coupons uniquement si le seuil final est atteint. Les barrières sont exprimées en % du spot initial.</p>
-      <div class="fields"><div class="full"><label for="ac-plain-coupon">Coupon par observation (%)</label><input id="ac-plain-coupon" type="number" value="4" min="0" max="100" step="any" required></div><div class="full"><label for="ac-plain-barrier">Rappel et coupon final (%)</label><input id="ac-plain-barrier" type="number" value="100" min="0.01" max="300" step="any" required></div><label class="check full"><input id="ac-plain-protection" type="checkbox" checked> Protection conditionnelle à maturité</label><div class="full"><label for="ac-plain-ki">Barrière de protection (%)</label><input id="ac-plain-ki" type="number" value="60" min="0.01" max="100" step="any" required></div></div>
-      <p class="hint">Sous la protection à maturité : remboursement du capital = nominal × niveau final / spot initial. Sans cette protection, le modèle rembourse le nominal.</p>
-      <h2 style="margin-top:16px">Simulation</h2><div class="fields"><div class="full"><label for="ac-plain-nsims">Nombre de simulations</label><input id="ac-plain-nsims" type="number" value="50000" min="1000" max="500000" step="1000" required></div><div class="full"><label for="ac-plain-seed">Graine (résultats reproductibles)</label><input id="ac-plain-seed" type="number" value="42" min="0" max="4294967295" step="1" required></div></div>
-      <button class="primary" type="submit">Calculer</button><p id="ac-plain-status" class="status" role="status" aria-live="polite"></p>
+      <button class="primary" type="submit">Calculer</button>
+      <p id="opt-status" class="status" role="status" aria-live="polite"></p>
+    </form>
+  </div>
+  <div class="results" id="opt-results"><div class="empty">Renseigne l'option puis lance le calcul.</div></div>
+</section>
+
+<!-- ============ II. Stratégies ============ -->
+<section id="panel-strategies" class="grid" hidden>
+  <div class="card side">
+    <h2><span class="num">II</span>Stratégie</h2>
+    <p class="course-note"><b>Cours, ch. 3.</b> Covered call, protective put, straddle, strangle, spreads, collar, risk reversal et forward synthétique.</p>
+    <form id="form-strategy" novalidate>
+      <div class="fields">
+        <div class="full"><label for="strat-select">Stratégie</label>
+          <select id="strat-select"></select></div>
+      </div>
+      <div id="strat-desc" class="course-note" hidden></div>
+      <div class="fields" id="strat-params"></div>
+      <div class="fields">
+        <div class="full"><label for="strat-months">Maturité (mois)</label>
+          <input id="strat-months" type="number" value="6" min="0.1" max="360" step="any" required></div>
+      </div>
+      <button class="primary" type="submit">Calculer</button>
+      <p id="strat-status" class="status" role="status" aria-live="polite"></p>
+    </form>
+  </div>
+  <div class="results" id="strat-results"><div class="empty">Choisis une stratégie puis lance le calcul.</div></div>
+</section>
+
+<!-- ============ III. Produits structurés ============ -->
+<section id="panel-structured" class="grid" hidden>
+  <div class="card side">
+    <h2><span class="num">III</span>Produit structuré</h2>
+    <div class="fields">
+      <div class="full"><label for="struct-product">Produit</label>
+        <select id="struct-product">
+          <option value="phoenix">Phoenix</option>
+          <option value="autocall_plain">Athéna (Autocall Plain) — coupons accumulés</option>
+          <option value="accumulateur">Accumulateur</option>
+          <option value="decumulateur">Décumulateur</option>
+          <option value="dra">DRA Daily (Daily Range Accrual)</option>
+        </select></div>
+    </div>
+    <p id="mc-only-note" class="mc-note" hidden>Ce produit est valorisé par <b>Monte Carlo uniquement</b> (barrières observées aux constats, pas de formule fermée) : le choix Black-Scholes n'a pas d'effet ici.</p>
+
+    <!-- Phoenix -->
+    <form id="form-phoenix" data-product="phoenix" novalidate>
+      <h3>Durée et nominal</h3>
+      <div class="fields">
+        <div><label for="phx-nominal">Montant investi</label><input id="phx-nominal" type="number" value="1000" min="1" step="any" required></div>
+        <div><label for="phx-freq">Observations</label>
+          <select id="phx-freq"><option value="1">Annuelles</option><option value="2" selected>Semestrielles</option><option value="4">Trimestrielles</option><option value="12">Mensuelles</option></select></div>
+        <div class="full"><label for="phx-months">Maturité (mois)</label>
+          <input id="phx-months" type="number" value="36" min="6" max="360" step="6" required>
+          <p class="hint" id="phx-dates-hint"></p></div>
+      </div>
+      <h3>Coupons</h3>
+      <div class="fields">
+        <div class="full"><label for="phx-coupon">Coupon par période (%)</label><input id="phx-coupon" type="number" value="4" min="0" max="100" step="any" required></div>
+        <label class="check full"><input id="phx-stepup-on" type="checkbox"> Coupon step-up : il augmente à chaque période</label>
+        <div class="full" id="phx-stepup-wrap" hidden><label for="phx-stepup">Hausse par période (%)</label><input id="phx-stepup" type="number" value="0.5" min="0.01" max="10" step="any"></div>
+        <label class="check full"><input id="phx-memory" type="checkbox"> Effet mémoire : un coupon manqué est rattrapé plus tard</label>
+      </div>
+      <h3>Barrières (en % du niveau initial)</h3>
+      <div class="fields">
+        <label class="check full"><input id="phx-autocall" type="checkbox" checked> Remboursement anticipé possible (autocall)</label>
+        <div class="full"><label for="phx-kauto">Remboursement anticipé (%)</label><input id="phx-kauto" type="number" value="100" min="1" max="300" step="any" required><p class="hint" id="phx-kauto-hint"></p></div>
+        <div class="full"><label for="phx-bcoupon">Coupon versé (%)</label><input id="phx-bcoupon" type="number" value="70" min="1" max="300" step="any" required><p class="hint" id="phx-bcoupon-hint"></p></div>
+        <div class="full"><label for="phx-bpdi">Capital protégé (%)</label><input id="phx-bpdi" type="number" value="60" min="1" max="300" step="any" required><p class="hint" id="phx-bpdi-hint"></p></div>
+      </div>
+      <details>
+        <summary>Bonus (facultatif)</summary>
+        <div class="fields" style="margin-top:12px">
+          <div><label for="phx-bonus-threshold">Seuil du bonus (%)</label><input id="phx-bonus-threshold" type="number" min="1" max="300" step="any" placeholder="aucun"></div>
+          <div><label for="phx-bonus-amount">Bonus (% investi)</label><input id="phx-bonus-amount" type="number" value="0" min="0" max="100" step="any"></div>
+        </div>
+      </details>
+      <button class="primary" type="submit">Calculer</button>
+      <p id="phx-status" class="status" role="status" aria-live="polite"></p>
     </form>
 
-    </div>
-
-    <div class="results" id="phx-results">
-      <div class="empty">Choisis un produit pour afficher ses réglages.</div>
-    </div>
-  </section>
-</main>
-<script>
-const $ = id => document.getElementById(id);
-const fmt = x => new Intl.NumberFormat('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:4}).format(x);
-function majHorloge() {
-  const maintenant = new Date();
-  $('clock-time').textContent = maintenant.toLocaleTimeString('fr-FR', {timeZone: 'Europe/Paris'});
-  $('clock-date').textContent = maintenant.toLocaleDateString('fr-FR', {timeZone: 'Europe/Paris', day: '2-digit', month: '2-digit', year: 'numeric'});
-}
-majHorloge();
-setInterval(majHorloge, 1000);
-
-let chartId = 0;   // identifiant unique par graphe (pour les zones de découpe SVG)
-function renderChart(ST_grid, series, breakevens, opts = {}) {
-  const W=760, H=340, L=60, R=16, top=34, bottom=44;
-  const id = ++chartId;
-  const xmin = ST_grid[0], xmax = ST_grid[ST_grid.length-1];
-  const allValues = series.flatMap(s => s.values);
-  const pad = Math.max((Math.max(...allValues) - Math.min(...allValues)) * .12, 1);
-  const ymin = Math.min(0, ...allValues) - pad, ymax = Math.max(0, ...allValues) + pad;
-
-  const X = x => L + (x-xmin)/(xmax-xmin) * (W-L-R);
-  const Y = y => top + (ymax-y)/(ymax-ymin) * (H-top-bottom);
-  const nb = v => new Intl.NumberFormat('fr-FR', {maximumFractionDigits: 2}).format(v);
-
-  const colors = {payoff:'#5cc8ff', pnl:'#ffa028'};
-  const dash = {payoff:'6 5', pnl:'0'};
-  const labels = Object.assign({payoff:'Payoff brut', pnl:'P&L net (après prime)'}, opts.labels || {});
-
-  let content = `<rect x="0" y="0" width="${W}" height="${H}" fill="#000"/>`;
-  for (let i=0;i<=4;i++){
-    const y = ymin + (ymax-ymin)*i/4;
-    content += `<line x1="${L}" x2="${W-R}" y1="${Y(y)}" y2="${Y(y)}" stroke="#1a1f27"/>`;
-    content += `<text x="${L-8}" y="${Y(y)+4}" text-anchor="end">${nb(y)}</text>`;
-  }
-  for (let i=0;i<=5;i++){
-    const x = xmin + (xmax-xmin)*i/5;
-    content += `<line x1="${X(x)}" x2="${X(x)}" y1="${top}" y2="${H-bottom}" stroke="#12161c"/>`;
-    content += `<text x="${X(x)}" y="${H-bottom+20}" text-anchor="middle">${nb(x)}</text>`;
-  }
-  content += `<text x="${(W+L-R)/2}" y="${H-6}" text-anchor="middle">${opts.xLabel || 'Prix du sous-jacent à maturité'}</text>`;
-
-  // Zones de gain (vert) et de perte (rouge) sous la courbe de P&L
-  const zero = Y(0);
-  content += `<defs>
-    <clipPath id="haut${id}"><rect x="${L}" y="${top}" width="${W-L-R}" height="${zero-top}"/></clipPath>
-    <clipPath id="bas${id}"><rect x="${L}" y="${zero}" width="${W-L-R}" height="${H-bottom-zero}"/></clipPath>
-  </defs>`;
-  const pnlSerie = series.find(s => s.key === 'pnl');
-  if (pnlSerie) {
-    const pts = ST_grid.map((x,i) => `L${X(x).toFixed(2)},${Y(pnlSerie.values[i]).toFixed(2)}`).join(' ');
-    const aire = `M${X(xmin)},${zero} ${pts} L${X(xmax)},${zero} Z`;
-    content += `<path d="${aire}" fill="#3ddc84" fill-opacity=".14" clip-path="url(#haut${id})"/>`;
-    content += `<path d="${aire}" fill="#ff5c5c" fill-opacity=".14" clip-path="url(#bas${id})"/>`;
-  }
-  content += `<line x1="${L}" x2="${W-R}" y1="${zero}" y2="${zero}" stroke="#5b616b"/>`;
-
-  // Lignes verticales (barrières d'un produit structuré, par exemple)
-  (opts.markers || []).forEach((m, i) => {
-    if (m.x < xmin || m.x > xmax) return;
-    content += `<line x1="${X(m.x)}" x2="${X(m.x)}" y1="${top}" y2="${H-bottom}" stroke="${m.color}" stroke-dasharray="2 4"/>`;
-    content += `<text x="${X(m.x)+5}" y="${top + 14 + i*14}" text-anchor="start" style="fill:${m.color};paint-order:stroke;stroke:#000;stroke-width:4px">${m.label}</text>`;
-  });
-
-  series.forEach(s => {
-    const path = ST_grid.map((x,i) => (i?'L':'M') + X(x).toFixed(2) + ',' + Y(s.values[i]).toFixed(2)).join(' ');
-    content += `<path d="${path}" fill="none" stroke="${colors[s.key]||'#ffa028'}" stroke-width="${s.key==='pnl'?2.2:1.6}" stroke-dasharray="${dash[s.key]||'0'}" stroke-linejoin="round"/>`;
-  });
-
-  (breakevens||[]).forEach(be => {
-    content += `<line x1="${X(be)}" x2="${X(be)}" y1="${top}" y2="${H-bottom}" stroke="#f5d547" stroke-dasharray="3 4"/>`;
-    content += `<circle cx="${X(be)}" cy="${zero}" r="4" fill="#000" stroke="#f5d547" stroke-width="1.6"/>`;
-    content += `<text x="${X(be)+6}" y="${zero-8}" text-anchor="start" style="fill:#f5d547;paint-order:stroke;stroke:#000;stroke-width:4px">${nb(be)}</text>`;
-  });
-
-  // Légende
-  let legendX = L;
-  const legendY = top - 14;
-  series.forEach(s => {
-    const label = labels[s.key] || s.key;
-    content += `<line x1="${legendX}" x2="${legendX+18}" y1="${legendY}" y2="${legendY}" stroke="${colors[s.key]||'#ffa028'}" stroke-width="2" stroke-dasharray="${dash[s.key]||'0'}"/>`;
-    content += `<text x="${legendX+24}" y="${legendY+4}" text-anchor="start" style="fill:#c9ccd1">${label}</text>`;
-    legendX += 24 + label.length * 6.7 + 22;
-  });
-  if ((breakevens||[]).length) {
-    content += `<circle cx="${legendX+5}" cy="${legendY}" r="4" fill="#000" stroke="#f5d547" stroke-width="1.6"/>`;
-    content += `<text x="${legendX+15}" y="${legendY+4}" text-anchor="start" style="fill:#c9ccd1">Breakeven</text>`;
-  }
-
-  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Payoff et P&amp;L à maturité">${content}</svg>`;
-}
-
-async function callApi(url, payload) {
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify(payload)
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Erreur inconnue.');
-  return data;
-}
-
-// -- Recherche de ticker : fonction générique réutilisée par chaque onglet --
-function wireTickerSearch({ inputId, resultsId, statusId, onSelect }) {
-  const input = $(inputId), box = $(resultsId), status = $(statusId);
-  let debounceTimer = null;
-
-  input.addEventListener('input', () => {
-    clearTimeout(debounceTimer);
-    const query = input.value.trim();
-    if (query.length < 1) { box.hidden = true; return; }
-    debounceTimer = setTimeout(async () => {
-      try {
-        const res = await fetch('/api/search_ticker?q=' + encodeURIComponent(query));
-        const data = await res.json();
-        if (!data.results || !data.results.length) { box.hidden = true; return; }
-        box.innerHTML = data.results.map(r =>
-          `<div data-symbol="${r.symbol}" class="ticker-hit">
-            <strong>${r.symbol}</strong> — ${r.name || ''} <span style="color:var(--muted)">${r.exchange || ''}</span>
-          </div>`
-        ).join('');
-        box.hidden = false;
-        box.querySelectorAll('[data-symbol]').forEach(el => {
-          el.addEventListener('click', () => {
-            input.value = el.dataset.symbol;
-            box.hidden = true;
-            onSelect(el.dataset.symbol, status);
-          });
-        });
-      } catch (e) { /* recherche best-effort, pas d'erreur bloquante affichée */ }
-    }, 350);
-  });
-}
-
-async function fetchMarketData(symbol, statusEl, applyFn) {
-  statusEl.textContent = 'Récupération des données de marché...';
-  try {
-    const res = await fetch('/api/market/' + encodeURIComponent(symbol));
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
-    applyFn(data);
-    statusEl.textContent = `${symbol} (${data.devise}) · spot ${data.S0} · vol. historique ${data.vol_hist != null ? fmtVol(data.vol_hist) : 'n.d.'} · VIX ${fmtVol(data.vix)}`;
-  } catch (e) {
-    statusEl.textContent = 'Erreur : ' + e.message;
-  }
-}
-
-// -------- Volatilité : manuelle, historique 1 an ou VIX --------
-// Les vols de marché sont gardées par onglet ('opt', 'strat', 'phx') après la recherche d'un ticker.
-const volMarche = {};
-const LIBELLES_VOL = {hist: 'σ historique 1 an', vix: 'σ = VIX'};
-const fmtVol = v => v == null ? 'n.d.' : new Intl.NumberFormat('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(v) + ' %';
-
-function afficherSigma(p) {
-  const source = $(p + '-sigma-source').value;
-  const manuelle = source === 'manual';
-  $(p + '-sigma-manual-wrap').hidden = !manuelle;
-  $(p + '-sigma-mkt-wrap').hidden = manuelle;
-  $(p + '-sigma').required = manuelle;
-  if (!manuelle) {
-    $(p + '-sigma-mkt-label').textContent = LIBELLES_VOL[source];
-    const v = (volMarche[p] || {})[source];
-    $(p + '-sigma-mkt-display').value = v == null ? 'cherche un ticker' : fmtVol(v);
-  }
-}
-function wireSigma(p) {
-  $(p + '-sigma-source').addEventListener('change', () => afficherSigma(p));
-}
-// Après la recherche d'un ticker : on retient ses vols et on bascule sur l'historique,
-// plus adaptée à une action que le VIX (qui mesure la vol du S&P 500).
-function setVolMarche(p, data) {
-  volMarche[p] = {hist: data.vol_hist, vix: data.vix};
-  $(p + '-sigma-source').value = data.vol_hist != null ? 'hist' : 'vix';
-  afficherSigma(p);
-}
-function lireSigma(p) {
-  const source = $(p + '-sigma-source').value;
-  if (source === 'manual') return $(p + '-sigma').value;
-  const v = (volMarche[p] || {})[source];
-  if (v == null) {
-    throw new Error(source === 'hist'
-      ? "Cherche d'abord un ticker pour calculer sa volatilité historique."
-      : "Cherche d'abord un ticker pour récupérer le VIX.");
-  }
-  return v;
-}
-
-// Présentation commune : mêmes valeurs, ordre et précision pour les deux produits.
-const fmtMontant = value => new Intl.NumberFormat('fr-FR', {minimumFractionDigits:2,maximumFractionDigits:2}).format(value);
-function renderStructuredMetrics(data) {
-  const marge=data.marge_emetteur_pct ?? data.ecart_souscription_pct;
-  const lignes=[
-    ['Prix théorique',fmtPct(data.prix_pct)],
-    ['Valeur pour le montant investi',fmtMontant(data.prix)],
-    ['Marge émetteur',fmtPct(marge),marge>=0?'pos':'neg'],
-    ['Probabilité de perte en capital',fmtPct(data.proba_perte_capital_pct)],
-    ['Durée de vie moyenne',fmtMontant(data.duree_de_vie_moyenne)+' ans'],
-    ["Va jusqu'à maturité",fmtPct(data.proba_maturite_pct)],
-    ['Remboursement moyen si perte',data.remboursement_moyen_si_perte_pct===null?'—':fmtPct(data.remboursement_moyen_si_perte_pct)],
-    ['Coupons moyens actualisés',fmtPct(data.coupons_moyens_actualises_pct)],
-  ];
-  return '<div class="metrics">'+lignes.map(([label,value,color])=>`<div class="metric"><p>${label}</p><strong class="${color||''}">${value}</strong></div>`).join('')+'</div>';
-}
-
-// -------- Onglet Produits structurés : choix du produit --------
-// Chaque produit a son propre <form data-product="...">. Pour en ajouter un,
-// il suffit d'ajouter une <option> et un formulaire avec le bon data-product.
-$('struct-product').addEventListener('change', () => {
-  const produit = $('struct-product').value;
-  document.querySelectorAll('#panel-structured form[data-product]').forEach(f => {
-    f.hidden = f.dataset.product !== produit;
-  });
-  $('phx-results').innerHTML = '<div class="empty">Lance un calcul pour voir les résultats.</div>';
-  const CODES_PRODUITS = {phoenix: ['PHNX', 'Phoenix autocallable'], autocall_plain: ['ACPL', 'Autocall Plain']};
-  if (CODES_PRODUITS[produit]) {
-    $('cmd-code').textContent = 'STRC ' + CODES_PRODUITS[produit][0];
-    $('cmd-desc').textContent = CODES_PRODUITS[produit][1];
-  }
-});
-
-// -------- Onglet Produits structurés : Phoenix --------
-$('phx-stepup-on').addEventListener('change', () => {
-  const on = $('phx-stepup-on').checked;
-  $('phx-stepup-wrap').hidden = !on;
-  $('phx-stepup').required = on;
-});
-const fmtPct = x => new Intl.NumberFormat('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}).format(x) + ' %';
-
-// Les dates ne sont jamais saisies à la main : elles sont construites à partir
-// de la maturité et de la fréquence, donc forcément croissantes.
-// La maturité doit être un multiple de la période : on l'impose avec step/min.
-function updatePhoenixDates() {
-  const pasMois = 12 / Number($('phx-freq').value);
-  const months = $('phx-months');
-  months.step = pasMois;
-  months.min = pasMois;
-  const n = Number(months.value) / pasMois;
-  $('phx-dates-hint').textContent = Number.isInteger(n) && n > 0
-    ? `${n} date(s) d'observation, tous les ${pasMois} mois.`
-    : `La maturité doit être un multiple de ${pasMois} mois.`;
-}
-$('phx-freq').addEventListener('change', updatePhoenixDates);
-
-// Le spot ne se saisit pas : un Phoenix se lit en % du niveau de départ.
-// Sans ticker on part de 100 (barrière 70 % = 70), avec un ticker on part du vrai spot.
-let phxSpot = 100, phxDevise = '';
-function phxNiveau(pct) {
-  const niveau = phxSpot * pct / 100;
-  const p = new Intl.NumberFormat('fr-FR', {maximumFractionDigits:2}).format(pct) + ' %';
-  return phxDevise ? `${p} du départ (${fmt(niveau)} ${phxDevise})` : `${p} du départ`;
-}
-function updatePhoenixHints() {
-  const kauto = Number($('phx-kauto').value), bcoupon = Number($('phx-bcoupon').value), bpdi = Number($('phx-bpdi').value);
-  $('phx-kauto-hint').textContent = $('phx-autocall').checked
-    ? `À chaque date, si le sous-jacent est au-dessus de ${phxNiveau(kauto)}, tu récupères ton capital + le coupon et le produit s'arrête.`
-    : 'Désactivé : le produit va toujours jusqu\'à maturité.';
-  $('phx-bcoupon-hint').textContent = `À chaque date, s'il est au-dessus de ${phxNiveau(bcoupon)}, tu touches le coupon.`;
-  $('phx-bpdi-hint').textContent = `À maturité, s'il est sous ${phxNiveau(bpdi)}, tu perds autant que la baisse du sous-jacent.`;
-}
-['phx-kauto','phx-bcoupon','phx-bpdi'].forEach(id => $(id).addEventListener('input', updatePhoenixHints));
-$('phx-autocall').addEventListener('change', updatePhoenixHints);
-$('phx-months').addEventListener('input', updatePhoenixDates);
-updatePhoenixDates();
-updatePhoenixHints();
-
-// Ordre des barrières : protection ≤ coupon ≤ rappel.
-// setCustomValidity bloque l'envoi du formulaire avec un message natif du navigateur.
-function checkPhoenixBarriers() {
-  const kauto = Number($('phx-kauto').value), bcoupon = Number($('phx-bcoupon').value), bpdi = Number($('phx-bpdi').value);
-  $('phx-bpdi').setCustomValidity(bpdi > bcoupon ? 'La protection doit être ≤ à la barrière coupon.' : '');
-  $('phx-bcoupon').setCustomValidity($('phx-autocall').checked && bcoupon > kauto ? 'La barrière coupon doit être ≤ à la barrière de rappel.' : '');
-}
-['phx-kauto','phx-bcoupon','phx-bpdi','phx-autocall'].forEach(id => $(id).addEventListener('input', checkPhoenixBarriers));
-$('phx-autocall').addEventListener('change', () => {
-  $('phx-kauto').disabled = !$('phx-autocall').checked;
-  checkPhoenixBarriers();
-});
-
-wireTickerSearch({
-  inputId: 'phx-ticker', resultsId: 'phx-ticker-results', statusId: 'phx-ticker-status',
-  onSelect: (symbol, statusEl) => fetchMarketData(symbol, statusEl, data => {
-    phxSpot = data.S0; phxDevise = data.devise;
-    updatePhoenixHints();
-    setVolMarche('phx', data);
-  }),
-});
-
-wireSigma('phx');
-
-$('form-phoenix').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  checkPhoenixBarriers();
-  if (!e.target.reportValidity()) return;
-
-  const btn = e.target.querySelector('button');
-  const status = $('phx-status');
-  btn.disabled = true; status.className='status'; status.textContent='Simulation en cours...';
-  try {
-    const sigma = lireSigma('phx');
-
-    const freq = Number($('phx-freq').value);
-    const nDates = Number($('phx-months').value) / (12 / freq);
-    const coupon0 = Number($('phx-coupon').value);
-    const hausse = $('phx-stepup-on').checked ? Number($('phx-stepup').value) : 0;
-    // Coupon fixe si pas de hausse, sinon liste step-up : c, c + h, c + 2h...
-    const coupon = hausse > 0
-      ? Array.from({length: nDates}, (_, i) => coupon0 + i * hausse)
-      : coupon0;
-
-    const payload = {
-      S0: phxSpot, sigma: sigma, r: $('phx-r').value, q: $('phx-q').value,
-      nominal: $('phx-nominal').value,
-      T: Number($('phx-months').value) / 12, frequence: freq,
-      coupon: coupon,
-      K_auto: $('phx-kauto').value, B_phoenix: $('phx-bcoupon').value, B_pdi: $('phx-bpdi').value,
-      memory: $('phx-memory').checked, has_autocall: $('phx-autocall').checked,
-      bonus_threshold: $('phx-bonus-threshold').value,
-      bonus_amount: $('phx-bonus-amount').value || 0,
-      n_simulations: $('phx-nsims').value,
-    };
-    const data = await callApi('/api/phoenix', payload);
-    status.textContent = `Résultats à jour (${fmt(data.prix)} pour ${fmt(Number(payload.nominal))} investis).`;
-
-    const niv = data.niveaux;
-    const markers = [
-      niv.autocall !== null ? {x: niv.autocall, label: 'Rappel', color: '#5cc8ff'} : null,
-      {x: niv.coupon, label: 'Coupon', color: '#3ddc84'},
-      {x: niv.protection, label: 'Protection', color: '#ff5c5c'},
-    ].filter(Boolean);
-
-    const n = data.obs_dates.length;
-    const lignes = data.obs_dates.map((t, i) => {
-      const derniere = i === n - 1;
-      return `<tr>
-        <td>${fmt(t)} an(s)</td>
-        <td>${fmtPct(data.coupon_schedule_pct[i])}</td>
-        <td>${derniere ? '—' : fmtPct(data.proba_rappel_par_date_pct[i])}</td>
-      </tr>`;
-    }).join('');
-
-    if ($('struct-product').value !== 'phoenix') return;
-    $('phx-results').innerHTML = `
-      ${renderStructuredMetrics(data)}
-      <div class="card chart-card">
-        ${renderChart(data.ST_grid, [{key:'payoff', values:data.payoff}, {key:'pnl', values:data.pnl}], [], {
-          labels: {payoff: 'Remboursement à maturité', pnl: 'Gain ou perte vs montant investi'},
-          xLabel: phxDevise ? `Prix du sous-jacent à maturité (${phxDevise})` : 'Niveau du sous-jacent à maturité (100 = départ)',
-          markers: markers,
-        })}
-        <p class="chart-note">Cas où le produit n'a pas été rappelé avant maturité. Seul le coupon de la dernière date est compté : les coupons déjà versés et l'effet mémoire dépendent du chemin suivi. Intervalle de confiance du prix : ${fmtPct(data.ic95_pct[0])} à ${fmtPct(data.ic95_pct[1])}.</p>
+    <!-- Athéna / Autocall Plain -->
+    <form id="form-autocall_plain" data-product="autocall_plain" hidden novalidate>
+      <h3>Durée et nominal</h3>
+      <div class="fields">
+        <div><label for="ac-plain-nominal">Montant investi</label><input id="ac-plain-nominal" type="number" value="1000" min="0.01" step="any" required></div>
+        <div><label for="ac-plain-freq">Observations</label>
+          <select id="ac-plain-freq"><option value="1">Annuelles</option><option value="2" selected>Semestrielles</option><option value="4">Trimestrielles</option><option value="12">Mensuelles</option></select></div>
+        <div class="full"><label for="ac-plain-months">Maturité (mois)</label><input id="ac-plain-months" type="number" value="36" min="1" max="360" step="1" required></div>
+        <div class="full"><label for="ac-plain-first">Premier rappel autorisé à partir de (mois)</label><input id="ac-plain-first" type="number" value="6" min="0" max="360" step="1" required></div>
+        <label class="check full"><input id="ac-plain-autocall" type="checkbox" checked> Remboursement anticipé possible (autocall)</label>
       </div>
-      <div class="card chart-card">
-        <h2>Calendrier d'observation</h2>
-        <table class="greeks-table">
-          <thead><tr><th>Date</th><th>Coupon de la période</th><th>Probabilité de rappel</th></tr></thead>
-          <tbody>${lignes}</tbody>
-        </table>
-      </div>`;
-  } catch (err) {
-    status.className='status error'; status.textContent = err.message;
-  } finally {
-    btn.disabled = false;
-  }
-});
+      <h3>Coupons et barrières</h3>
+      <p class="hint" style="margin:0 0 10px">Coupons accumulés payés au rappel ; à maturité, tous les coupons uniquement si le seuil final est atteint. Barrières en % du spot initial.</p>
+      <div class="fields">
+        <div class="full"><label for="ac-plain-coupon">Coupon par observation (%)</label><input id="ac-plain-coupon" type="number" value="4" min="0" max="100" step="any" required></div>
+        <div class="full"><label for="ac-plain-barrier">Rappel et coupon final (%)</label><input id="ac-plain-barrier" type="number" value="100" min="0.01" max="300" step="any" required></div>
+        <label class="check full"><input id="ac-plain-protection" type="checkbox" checked> Protection conditionnelle à maturité</label>
+        <div class="full"><label for="ac-plain-ki">Barrière de protection (%)</label><input id="ac-plain-ki" type="number" value="60" min="0.01" max="100" step="any" required></div>
+      </div>
+      <button class="primary" type="submit">Calculer</button>
+      <p id="ac-plain-status" class="status" role="status" aria-live="polite"></p>
+    </form>
 
-// -------- Autocall Plain / sans rappel : formulaires et résultats --------
-const acPercent = fmtPct;
-let acSelectionVersion = 0;
-$('struct-product').addEventListener('change', () => { ++acSelectionVersion; });
-function afficherAutocall(data) {
-  const plain=data.produit==='autocall_plain';
-  const callable=data.has_autocall!==false;
-  const result=document.createElement('div');
-  result.innerHTML=renderStructuredMetrics(data);
-  const card=document.createElement('div');card.className='card chart-card';
-  const title=document.createElement('h2'); title.textContent=callable?'Autocall Plain · résultats':'Plain sans rappel · résultats';
-  const note=document.createElement('p');note.className='chart-note';
-  note.textContent=`Intervalle de confiance Monte Carlo à 95 % : ${acPercent(data.ic95_pct[0])} à ${acPercent(data.ic95_pct[1])}. ${data.n_simulations.toLocaleString('fr-FR')} simulations · graine ${data.seed}. Écart souscription − valeur : ${acPercent(data.ecart_souscription_pct)} (hors coûts et risque de défaut).`;
-  const rules=document.createElement('p');rules.className='chart-note';
-  rules.textContent=(!callable?'Aucun rappel anticipé. Tous les coupons accumulés sont payés à maturité uniquement si le seuil final est atteint.':plain?'Les coupons s’accumulent : paiement au rappel, ou à maturité si le seuil final est atteint.':'Coupons acquis aux constats, sans mémoire, tous payés à maturité. Aucun rappel anticipé.')+' La probabilité de perte concerne le principal, avant prise en compte des coupons.';
-  const loss=document.createElement('p');loss.className='chart-note';loss.textContent=data.remboursement_moyen_si_perte_pct===null?'Aucune perte de capital dans les simulations.':'Capital moyen remboursé en cas de perte : '+acPercent(data.remboursement_moyen_si_perte_pct)+'.';
-  card.append(title,note,rules,loss);
-  const calendar=document.createElement('div');calendar.className='card chart-card';
-  const h=document.createElement('h2');h.textContent='Calendrier des observations';
-  const table=document.createElement('table');table.className='greeks-table';
-  table.innerHTML='<thead><tr><th>Date</th><th>Coupon '+(plain?'accumulé':'par constat')+'</th><th>'+(plain?'Rappel à cette date':'Paiement')+'</th></tr></thead>';
-  const body=document.createElement('tbody');
-  data.obs_dates.forEach((t,i) => {
-    const row=document.createElement('tr');
-    let last;
-    if(plain) last=i===data.obs_dates.length-1?'Maturité':!callable?'Désactivé':t<data.first_call_date?'Non autorisé':acPercent(data.proba_rappel_par_date_pct[i]);
-    else last=i===data.obs_dates.length-1?'Capital + coupons acquis':'À maturité';
-    for(const text of [fmt(t)+' ans',acPercent(data.coupon_pct*(plain?i+1:1)),last]) { const td=document.createElement('td');td.textContent=text;row.append(td); }
-    body.append(row);
-  });
-  table.append(body);calendar.append(h,table);
-  const foot=document.createElement('p');foot.className='chart-note';
-  foot.textContent=plain?'Le coupon accumulé est conditionnel au remboursement : ce tableau ne représente pas des coupons versés à chaque date.':'Les coupons dépendent de tous les constats ; un graphe fondé uniquement sur le niveau final ne les représente pas.';
-  calendar.append(foot);
-  const chart=document.createElement('div');chart.className='card chart-card';
-  chart.innerHTML=renderChart(data.ST_grid,[{key:'payoff',values:data.payoff},{key:'pnl',values:data.pnl}],[],{
-    labels:{payoff:'Remboursement à maturité',pnl:'Gain ou perte vs montant investi'},
-    xLabel:'Prix du sous-jacent à maturité (même unité que le spot)',
-    markers:[{x:data.niveaux.coupon,label:callable?'Rappel / coupon final':'Coupon final',color:'#5cc8ff'},
-      ...(data.niveaux.protection===null?[]:[{x:data.niveaux.protection,label:'Protection',color:'#ff5c5c'}])],
-  });
-  const chartNote=document.createElement('p');chartNote.className='chart-note';
-  chartNote.textContent="Cas où le produit n'a pas été rappelé avant maturité. Tous les coupons accumulés sont versés si le seuil final est atteint, sinon aucun. Les montants sont non actualisés ; le gain ou la perte se mesure par rapport au nominal investi.";
-  chart.append(chartNote);$('phx-results').replaceChildren(result.firstElementChild,chart,card,calendar);
-}
-for(const kind of ['plain']) {
-  const prefix='ac-'+kind, form=$('form-autocall_'+kind), button=form.querySelector('button[type=submit]');
-  let marketVersion=0;
-  wireTickerSearch({inputId:prefix+'-ticker',resultsId:prefix+'-suggestions',statusId:prefix+'-market-status',onSelect:async(symbol,status)=>{
-    const version=++marketVersion;button.disabled=true;status.textContent='Récupération du spot et de la volatilité…';
-    try {
-      const response=await fetch('/api/market/'+encodeURIComponent(symbol));const data=await response.json();
-      if(version!==marketVersion)return;
-      if(!response.ok)throw new Error(data.error||'Données indisponibles.');
-      if(!Number.isFinite(data.S0)||data.S0<=0)throw new Error('Spot indisponible.');
-      $(prefix+'-s0').value=data.S0;
-      setVolMarche(prefix, data);
-      status.textContent=`${symbol} (${data.devise || ''}) · spot ${data.S0} · vol. historique ${data.vol_hist != null ? fmtVol(data.vol_hist) : 'n.d.'} · VIX ${data.vix != null ? fmtVol(data.vix) : 'n.d.'}`;
-    } catch(err) {if(version===marketVersion)status.textContent=err.message+' Réessayez la recherche ou utilisez le mode manuel avec le spot déjà chargé.';}
-    finally {if(version===marketVersion)button.disabled=false;}
-  }});
-  wireSigma(prefix);
-  afficherSigma(prefix);
-  $(prefix+'-protection').addEventListener('change',()=>{$(prefix+'-ki').disabled=!$(prefix+'-protection').checked;});
-  function validateDates() {
-    const freq=Number($(prefix+'-freq').value),months=Number($(prefix+'-months').value);
-    $(prefix+'-months').setCustomValidity(months*freq/12>0&&Math.abs(months*freq/12-Math.round(months*freq/12))<1e-9?'':'La maturité doit correspondre à un nombre entier de périodes d’observation.');
-    if(kind==='plain')$(prefix+'-first').setCustomValidity((!$(prefix+'-autocall').checked||Number($(prefix+'-first').value)<=months)?'':'Le premier rappel ne peut pas être après la maturité.');
-  }
-  for(const field of ['freq','months',...(kind==='plain'?['first']:[])])$(prefix+'-'+field).addEventListener('input',validateDates);
-  if(kind==='plain') {
-    const updateAutocall=()=>{
-      const enabled=$(prefix+'-autocall').checked;
-      $(prefix+'-first').disabled=!enabled;
-      $(prefix+'-first').parentElement.hidden=!enabled;
-      document.querySelector('label[for="ac-plain-barrier"]').textContent=enabled?'Rappel et coupon final (%)':'Seuil du coupon final (%)';
-      validateDates();
-    };
-    $(prefix+'-autocall').addEventListener('change',updateAutocall);
-    updateAutocall();
-  }
-  validateDates();
-  form.addEventListener('submit',async e=>{
-    e.preventDefault();if(button.disabled)return;
-    const status=$(prefix+'-status'),version=acSelectionVersion;
-    const get=key=>$(prefix+'-'+key).value;
-    let sigma;
-    try { sigma=lireSigma(prefix); }
-    catch(err) { status.className='status error'; status.textContent=err.message; return; }
-    const payload={produit:'autocall_'+kind,S0:get('s0'),r:get('r'),q:get('q'),sigma:sigma,nominal:get('nominal'),T:Number(get('months'))/12,frequence:get('freq'),coupon:get('coupon'),K_auto:get('barrier'),protection:$(prefix+'-protection').checked,B_pdi:get('ki'),n_simulations:get('nsims'),seed:get('seed')};
-    if(kind==='plain'){payload.has_autocall=$(prefix+'-autocall').checked;payload.first_call_months=payload.has_autocall?get('first'):0;}
-    button.disabled=true;status.className='status';status.textContent='Calcul Monte Carlo en cours…';
-    $('phx-results').innerHTML='<div class="empty">Calcul en cours…</div>';
-    const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),90000);
-    try {
-      const response=await fetch('/api/autocall',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:controller.signal});
-      const data=await response.json();if(!response.ok)throw new Error(data.error||'Calcul indisponible.');
-      if(version!==acSelectionVersion)return;
-      afficherAutocall(data);status.textContent='Calcul terminé.';
-    } catch(err) {
-      status.className='status error';status.textContent=err.name==='AbortError'?'Calcul trop long. Réduisez le nombre de simulations et réessayez.':err.message;
-      if(version===acSelectionVersion)$('phx-results').innerHTML='<div class="empty">Vérifiez les paramètres et relancez le calcul.</div>';
-    } finally {clearTimeout(timeout);button.disabled=false;}
-  });
-}
+    <!-- Accumulateur / décumulateur -->
+    <form id="form-accu" data-product="accumulateur decumulateur" hidden novalidate>
+      <p class="course-note" id="accu-desc"></p>
+      <div class="fields">
+        <div><label for="acc-months">Maturité (mois)</label><input id="acc-months" type="number" value="12" min="1" max="360" step="1" required></div>
+        <div><label for="acc-freq">Constats</label>
+          <select id="acc-freq"><option value="quotidien">Quotidiens</option><option value="hebdomadaire">Hebdomadaires</option><option value="mensuel">Mensuels</option></select></div>
+        <div><label for="acc-strike" id="acc-strike-label">Strike (% du spot)</label><input id="acc-strike" type="number" value="90" min="1" max="400" step="any" required></div>
+        <div><label for="acc-ko" id="acc-ko-label">Barrière KO (% du spot)</label><input id="acc-ko" type="number" value="105" min="1" max="400" step="any" required></div>
+        <div><label for="acc-levier">Levier (zone adverse)</label><input id="acc-levier" type="number" value="2" min="1" max="10" step="any" required></div>
+        <div><label for="acc-qte">Quantité par constat</label><input id="acc-qte" type="number" value="1" min="0.0001" step="any" required></div>
+        <div class="full"><label for="acc-garanti">Constats garantis (sans KO)</label><input id="acc-garanti" type="number" value="0" min="0" step="1" required></div>
+        <label class="check full"><input id="acc-livraison" type="checkbox"> Livraison le jour du KO (convention du contrat)</label>
+        <label class="check full"><input id="acc-zero" type="checkbox"> Calculer aussi le strike « zéro coût » (quelques secondes de plus)</label>
+      </div>
+      <button class="primary" type="submit">Calculer</button>
+      <p id="acc-status" class="status" role="status" aria-live="polite"></p>
+    </form>
 
+    <!-- DRA Daily -->
+    <form id="form-dra" data-product="dra" hidden novalidate>
+      <p class="course-note">Capital remboursé à 100 % à maturité. Chaque jour où le sous-jacent est dans la fourchette, le produit accumule 1/252 du coupon annuel ; les coupons accumulés sont payés à chaque période.</p>
+      <div class="fields">
+        <div><label for="dra-nominal">Montant investi</label><input id="dra-nominal" type="number" value="1000" min="1" step="any" required></div>
+        <div><label for="dra-months">Maturité (mois)</label><input id="dra-months" type="number" value="24" min="1" max="360" step="1" required></div>
+        <div><label for="dra-low">Borne basse (% du spot)</label><input id="dra-low" type="number" value="90" min="1" max="400" step="any" required></div>
+        <div><label for="dra-high">Borne haute (% du spot)</label><input id="dra-high" type="number" value="110" min="1" max="400" step="any" required></div>
+        <div><label for="dra-coupon">Coupon annuel (%)</label><input id="dra-coupon" type="number" value="8" min="0" max="100" step="any" required></div>
+        <div><label for="dra-freq">Paiement des coupons</label>
+          <select id="dra-freq"><option value="mensuel">Mensuel</option><option value="trimestriel" selected>Trimestriel</option><option value="semestriel">Semestriel</option><option value="annuel">Annuel</option></select></div>
+      </div>
+      <button class="primary" type="submit">Calculer</button>
+      <p id="dra-status" class="status" role="status" aria-live="polite"></p>
+    </form>
+  </div>
+  <div class="results" id="st-results"><div class="empty">Lance un calcul pour voir les résultats.</div></div>
+</section>
 
-$("struct-product").value="phoenix"; $("struct-product").dispatchEvent(new Event("change"));
+<p class="footer">Projet pédagogique d'après le cours d'options de la S&amp;P Academy. Hypothèses de Black–Scholes : r, q et σ constants, pas de smile, pas de risque de défaut de l'émetteur.</p>
+</main>
 
-</script>
+<script src="/static/app.js"></script>
 </body>
 </html>

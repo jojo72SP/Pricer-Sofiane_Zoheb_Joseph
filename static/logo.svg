@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Globe">
+  <!-- Globe générique (méridiens et parallèles). Remplacer ce fichier par le logo officiel : même chemin, même nom. -->
+  <defs>
+    <clipPath id="c"><circle cx="32" cy="32" r="27"/></clipPath>
+  </defs>
+  <circle cx="32" cy="32" r="30" fill="#14213d"/>
+  <circle cx="32" cy="32" r="27" fill="none" stroke="#d4b45e" stroke-width="1.6"/>
+  <g clip-path="url(#c)" fill="none" stroke="#d4b45e" stroke-width="1.1">
+    <ellipse cx="32" cy="32" rx="12" ry="27"/>
+    <ellipse cx="32" cy="32" rx="22" ry="27"/>
+    <line x1="32" y1="5" x2="32" y2="59"/>
+    <line x1="5" y1="32" x2="59" y2="32"/>
+    <path d="M7 20 Q32 26 57 20"/>
+    <path d="M7 44 Q32 38 57 44"/>
+  </g>
+  <circle cx="32" cy="32" r="30" fill="none" stroke="#b08d2f" stroke-width="1.2"/>
+</svg>
