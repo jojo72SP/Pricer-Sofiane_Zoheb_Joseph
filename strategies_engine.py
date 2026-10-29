@@ -80,13 +80,6 @@ STRATEGIES = {
         "interet": "Perte bornée sous K1 grâce au put, financée en tout ou partie par la vente du call ; gain plafonné au-dessus de K2.",
         "parametres": ["K1", "K2"],
     },
-    "calendar": {
-        "nom": "Calendar (time spread)", "section": "3.7",
-        "construction": "Long option à maturité longue T2 + Short option à maturité courte T (même K, même type)",
-        "vue": "Marché dans une fourchette autour de K, ou remontée de la volatilité lointaine",
-        "interet": "Jouer la structure par terme : l'option courte perd sa valeur temps plus vite que la longue.",
-        "parametres": ["K", "T2"],
-    },
     "risk_reversal": {
         "nom": "Risk Reversal", "section": "3.8",
         "construction": "Version haussière : Long 1 call K2 + Short 1 put K1 (OTM). Version baissière : l'inverse.",
@@ -109,7 +102,7 @@ def _jambe(instrument, signe, K=None, T=None, libelle=""):
 
 
 def construire_jambes(nom, p):
-    """Liste des jambes d'une stratégie à partir de ses paramètres (K, K1, K2, T, T2, sens, option)."""
+    """Liste des jambes d'une stratégie à partir de ses paramètres (K, K1, K2, T, sens)."""
     T = p["T"]
     if nom == "covered_call":
         return [_jambe("action", +1, libelle="Long action"),
@@ -132,10 +125,6 @@ def construire_jambes(nom, p):
     if nom == "collar":
         return [_jambe("action", +1, libelle="Long action"),
                 _jambe("put", +1, p["K1"], T, "Long put"), _jambe("call", -1, p["K2"], T, "Short call")]
-    if nom == "calendar":
-        kind = p.get("option", "call")
-        return [_jambe(kind, +1, p["K"], p["T2"], f"Long {kind} (longue maturité)"),
-                _jambe(kind, -1, p["K"], T, f"Short {kind} (courte maturité)")]
     if nom == "risk_reversal":
         if p.get("sens", "haussier") == "haussier":
             return [_jambe("call", +1, p["K2"], T, "Long call OTM"), _jambe("put", -1, p["K1"], T, "Short put OTM")]
@@ -154,11 +143,6 @@ def _verifier(nom, p, S):
             raise ValueError(f"Le paramètre {cle} est obligatoire et doit être strictement positif.")
     if {"K1", "K2"} <= set(STRATEGIES[nom]["parametres"]) and not p["K1"] < p["K2"]:
         raise ValueError("Il faut K1 < K2.")
-    if nom == "calendar":
-        if not p["T2"] > p["T"]:
-            raise ValueError("La maturité longue T2 doit être strictement supérieure à la maturité courte T.")
-        if p.get("option", "call") not in oe.KINDS:
-            raise ValueError("L'option du calendar doit être 'call' ou 'put'.")
     if nom == "risk_reversal" and p.get("sens", "haussier") not in ("haussier", "baissier"):
         raise ValueError("Le sens du risk reversal doit être 'haussier' ou 'baissier'.")
 
@@ -185,8 +169,6 @@ def _pnl_jambe(j, ST, S, r, q, sigma, T_ref):
     if j["instrument"] == "action":
         return ST, S
     kind, K = j["instrument"], j["K"]
-    if j["T"] > T_ref + 1e-12:   # option encore vivante à T_ref (calendar) : valeur Black-Scholes restante
-        return oe.bs_price_array(kind, ST, K, j["T"] - T_ref, r, q, sigma), None
     return (np.maximum(ST - K, 0.0) if kind == "call" else np.maximum(K - ST, 0.0)), None
 
 
@@ -194,14 +176,12 @@ def analyser_strategie(nom, S, params, r, q, sigma, method="bs", n_simulations=1
     """Prix, grecs agrégés et profil de gain d'une stratégie du cours.
 
     params : dict avec T (maturité en années) et, selon la stratégie, K, K1, K2,
-    T2 (calendar), option ('call'/'put', calendar), sens (risk reversal).
+    sens (risk reversal : 'haussier' ou 'baissier').
     """
     if method not in oe.METHODS:
         raise ValueError("La méthode doit être 'bs' ou 'mc'.")
     _verifier(nom, params, S)
     oe.verifier_option(S, S, params["T"], r, q, sigma)
-    if nom == "calendar":
-        oe.verifier_option(S, S, params["T2"], r, q, sigma)
 
     jambes = construire_jambes(nom, params)
     Z = oe.tirages_normaux(n_simulations, seed) if method == "mc" else None
@@ -254,8 +234,6 @@ def analyser_strategie(nom, S, params, r, q, sigma, method="bs", n_simulations=1
 
     # Pente à l'infini : action et call valent +1 chacun, put 0.
     pente_haute = sum(j["signe"] * (1 if j["instrument"] in ("action", "call") else 0) for j in jambes)
-    if nom == "calendar":
-        pente_haute = 0
     tout = np.append(pnl, pnl_zero)
     extremes = {"gain_illimite": bool(pente_haute > 0), "perte_illimitee": bool(pente_haute < 0),
                 "gain_max": None if pente_haute > 0 else float(tout.max()),
